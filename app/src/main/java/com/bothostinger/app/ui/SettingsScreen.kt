@@ -47,10 +47,10 @@ import com.bothostinger.app.bot.RuntimeState
 import com.bothostinger.app.data.BotSettings
 
 private val statuses = listOf(
-    "online" to "🟢 En ligne",
-    "idle" to "🌙 Inactif",
-    "dnd" to "⛔ Occupé",
-    "invisible" to "⚫ Invisible",
+    "online" to "En ligne",
+    "idle" to "Inactif",
+    "dnd" to "Occupé",
+    "invisible" to "Invisible",
 )
 
 @Composable
@@ -115,14 +115,23 @@ fun SettingsScreen(
                 statuses.chunked(2).forEach { pair ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         pair.forEach { (value, label) ->
-                            SquareChoice(label, settings.status == value, { onPresenceChange(settings.copy(status = value)) }, Modifier.weight(1f))
+                            SquareChoice(
+                                label, settings.status == value, { onPresenceChange(settings.copy(status = value)) }, Modifier.weight(1f),
+                                leading = { StatusIcon(value) },
+                            )
                         }
                     }
                 }
                 SectionLabel("Activité", Modifier.padding(top = 6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SquareChoice("🎮 Joue à", settings.presenceMode == "playing", { onPresenceChange(settings.copy(presenceMode = "playing")) }, Modifier.weight(1f))
-                    SquareChoice("📺 Stream", settings.presenceMode == "streaming", { onPresenceChange(settings.copy(presenceMode = "streaming")) }, Modifier.weight(1f))
+                    SquareChoice(
+                        "Joue à", settings.presenceMode == "playing", { onPresenceChange(settings.copy(presenceMode = "playing")) }, Modifier.weight(1f),
+                        leading = { GamepadIcon(Palette.Text) },
+                    )
+                    SquareChoice(
+                        "Stream", settings.presenceMode == "streaming", { onPresenceChange(settings.copy(presenceMode = "streaming")) }, Modifier.weight(1f),
+                        leading = { StatusIcon("streaming", Modifier.size(16.dp)) },
+                    )
                 }
                 PresencePreview(settings, runtime.botName)
             }
@@ -137,7 +146,7 @@ fun SettingsScreen(
                     SquareToggle(settings.autoStart, onAutoStartChange)
                 }
                 if (batteryOk) {
-                    Hint("✓ Optimisation de batterie désactivée : le bot reste en ligne écran éteint.", Palette.Green)
+                    Hint("Optimisation de batterie désactivée : le bot reste en ligne écran éteint.", Palette.Green)
                 } else {
                     Hint("L'optimisation de batterie peut couper le bot quand l'écran est éteint.", Palette.Yellow)
                     OutlineButton("Autoriser en arrière-plan", { requestIgnoreBattery(context) }, Modifier.fillMaxWidth(), Icons.Filled.BatteryAlert)
@@ -153,7 +162,7 @@ fun SettingsScreen(
                     "Lance le bot, puis « Inviter le bot sur un serveur ».",
                 ).forEachIndexed { n, step ->
                     Row {
-                        Text("${n + 1}", color = Palette.Orange, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.width(22.dp))
+                        Text("${n + 1}", color = Palette.Accent, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.width(22.dp))
                         Hint(step, Palette.Text)
                     }
                 }
@@ -162,25 +171,17 @@ fun SettingsScreen(
     }
 }
 
-private val TwitchPurple = Color(0xFF9146FF)
-
 /** Aperçu du profil tel qu'il apparaît sur Discord. */
 @Composable
 private fun PresencePreview(settings: BotSettings, botName: String?) {
-    val dotColor = when (settings.status) {
-        "online" -> Palette.Green
-        "idle" -> Palette.Yellow
-        "dnd" -> Palette.Red
-        else -> Palette.TextDim
-    }
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Palette.Black)
+            .background(Palette.SecondaryButton)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(10.dp).background(if (settings.presenceMode == "streaming") TwitchPurple else dotColor))
+        StatusIcon(if (settings.presenceMode == "streaming") "streaming" else settings.status)
         Spacer(Modifier.width(10.dp))
         Column {
             Text(botName ?: "Ton bot", color = Palette.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)

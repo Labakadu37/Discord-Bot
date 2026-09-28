@@ -132,11 +132,11 @@ private fun Header(onConsole: () -> Unit, onSettings: () -> Unit) {
                 .background(Palette.gradient),
             contentAlignment = Alignment.Center,
         ) {
-            Text("B", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 26.sp)
+            Text("B", color = Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp)
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            GradientText("BotHostinger", fontSize = 24.sp)
+            Text("BotHostinger", color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp)
             Text("HÉBERGEUR DE BOT DISCORD", color = Palette.TextDim, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
         }
         SquareIconButton(Icons.Filled.Terminal, "Console", onConsole)
@@ -164,7 +164,14 @@ private fun StatusPanel(runtime: RuntimeState) {
 
     Panel(Modifier.fillMaxWidth(), borderBrush = if (online) Palette.gradient else SolidColor(Palette.Border)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(12.dp).background(color))
+            StatusIcon(
+                when (runtime.conn) {
+                    ConnState.ONLINE -> "online"
+                    ConnState.CONNECTING -> "idle"
+                    ConnState.ERROR -> "dnd"
+                    ConnState.OFFLINE -> "invisible"
+                }
+            )
             Spacer(Modifier.width(10.dp))
             Text(label.uppercase(), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 2.sp)
             Spacer(Modifier.weight(1f))
@@ -188,7 +195,7 @@ private fun uptime(ms: Long): String = if (ms < 60_000) "< 1 min" else formatDur
 private fun Stat(label: String, value: String, modifier: Modifier) {
     Column(
         modifier
-            .background(Palette.Black)
+            .background(Palette.SecondaryButton)
             .padding(10.dp)
     ) {
         Text(value, color = Palette.Text, fontWeight = FontWeight.Black, fontSize = 16.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
@@ -212,7 +219,7 @@ private fun Alert(text: String, action: String, onClick: () -> Unit) {
 private fun ModuleTile(module: Module, enabled: Boolean, onToggle: (Boolean) -> Unit, onClick: () -> Unit) {
     Panel(
         Modifier.fillMaxWidth().height(150.dp),
-        borderBrush = if (enabled) SolidColor(Color(0x66FF6A00)) else SolidColor(Palette.Border),
+        borderBrush = if (enabled) SolidColor(Color(0x663D6BFF)) else SolidColor(Palette.Border),
         onClick = onClick,
         padding = 14,
     ) {
@@ -223,7 +230,7 @@ private fun ModuleTile(module: Module, enabled: Boolean, onToggle: (Boolean) -> 
                     .background(if (enabled) Palette.gradient else SolidColor(Palette.SurfaceHigh)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(moduleIcon(module.id), null, tint = if (enabled) Color.Black else Palette.TextDim, modifier = Modifier.size(22.dp))
+                Icon(moduleIcon(module.id), null, tint = if (enabled) Color.White else Palette.TextDim, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.weight(1f))
             if (module.alwaysOn) Badge("Toujours") else SquareToggle(enabled, onToggle)

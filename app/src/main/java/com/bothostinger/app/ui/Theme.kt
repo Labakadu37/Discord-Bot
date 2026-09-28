@@ -11,36 +11,41 @@ import androidx.compose.ui.unit.dp
 
 object Palette {
     val Black = Color(0xFF050505)
-    val Surface = Color(0xFF111111)
-    val SurfaceHigh = Color(0xFF1A1A1A)
-    val Border = Color(0xFF2A2A2A)
+    /** Surfaces semi-transparentes : le dégradé du fond se voit à travers. */
+    val Surface = Color(0x99000000)
+    val SurfaceHigh = Color(0x33FFFFFF)
+    val Border = Color(0x26FFFFFF)
+    /** Fond des boutons secondaires (comme « Connexion » sur Discord), transparent. */
+    val SecondaryButton = Color(0x1FFFFFFF)
     val Text = Color(0xFFF5F5F5)
     val TextDim = Color(0xFF9A9A9A)
 
-    val OrangeLight = Color(0xFFFFB000)
-    val Orange = Color(0xFFFF6A00)
-    val OrangeDeep = Color(0xFFFF3D00)
+    val AccentLight = Color(0xFF4FC3FF)
+    val Accent = Color(0xFF3D6BFF)
+    val AccentDeep = Color(0xFF2A35D9)
 
     val Green = Color(0xFF2ECC71)
     val Yellow = Color(0xFFFFC107)
     val Red = Color(0xFFFF3B30)
+    val Stream = Color(0xFF9146FF)
 
-    /** Le dégradé orange de BotHostinger. */
-    val gradient = Brush.linearGradient(listOf(OrangeLight, Orange, OrangeDeep))
-    val gradientHorizontal = Brush.horizontalGradient(listOf(OrangeLight, Orange, OrangeDeep))
+    /** Le dégradé bleu de BotHostinger. */
+    val gradient = Brush.linearGradient(listOf(AccentLight, Accent, AccentDeep))
+    val gradientHorizontal = Brush.horizontalGradient(listOf(AccentLight, Accent, AccentDeep))
 
-    /** Fond : noir avec une lueur orange en haut. */
+    /** Fond : bleu transparent en haut qui se fond dans le noir en bas. */
     val backgroundGlow = Brush.verticalGradient(
-        0f to Color(0xFF2A1200),
-        0.35f to Black,
+        0f to Color(0xB32F5BFF),
+        0.3f to Color(0x4D2A4BFF),
+        0.6f to Color(0xFF03050D),
         1f to Black,
     )
 }
 
 private val colors = darkColorScheme(
-    primary = Palette.Orange,
-    onPrimary = Color.Black,
-    secondary = Palette.OrangeLight,
+    primary = Palette.Accent,
+    onPrimary = Color.White,
+    secondary = Palette.AccentLight,
     background = Palette.Black,
     onBackground = Palette.Text,
     surface = Palette.Surface,

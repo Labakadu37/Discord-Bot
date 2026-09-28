@@ -24,14 +24,14 @@ object Perm {
     const val MODERATE = 1L shl 40
 }
 
-/** Construction des embeds, tous à la couleur de BotHostinger. */
+/** Construction des embeds, tous au bleu de BotHostinger. */
 object Embeds {
-    const val ORANGE = 0xFF6A00
+    const val BLUE = 0x3D6BFF
     const val RED = 0xED4245
     const val GREEN = 0x3BA55D
     const val FOOTER = "⚡ BotHostinger"
 
-    fun base(title: String? = null, description: String? = null, color: Int = ORANGE): JSONObject {
+    fun base(title: String? = null, description: String? = null, color: Int = BLUE): JSONObject {
         val e = JSONObject().put("color", color).put("footer", JSONObject().put("text", FOOTER))
         if (title != null) e.put("title", title.take(256))
         if (description != null) e.put("description", description.take(4096))

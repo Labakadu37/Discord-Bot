@@ -11,13 +11,13 @@
                 android:type="linear"
                 android:startX="30" android:startY="30"
                 android:endX="78" android:endY="78">
-                <item android:offset="0" android:color="#FFFFB000" />
-                <item android:offset="0.5" android:color="#FFFF6A00" />
-                <item android:offset="1" android:color="#FFFF3D00" />
+                <item android:offset="0" android:color="#FF4FC3FF" />
+                <item android:offset="0.5" android:color="#FF3D6BFF" />
+                <item android:offset="1" android:color="#FF2A35D9" />
             </gradient>
         </aapt:attr>
     </path>
     <!-- B : barre verticale + deux boucles carrées -->
-    <path android:fillColor="#FF050505"
+    <path android:fillColor="#FFFFFFFF"
         android:pathData="M42,40h16a7,7 0,0 1,7 7v0a6,6 0,0 1,-3 5.2a7,7 0,0 1,4 6.3v0a7.5,7.5 0,0 1,-7.5 7.5h-16.5zM48,45.5v6.5h9a3.25,3.25 0,0 0,0 -6.5zM48,57v7.5h10a3.75,3.75 0,0 0,0 -7.5z" />
 </vector>

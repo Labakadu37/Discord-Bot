@@ -39,7 +39,7 @@ fun ModuleScreen(module: Module, enabled: Boolean, onToggle: (Boolean) -> Unit, 
                 Panel(Modifier.fillMaxWidth(), borderBrush = Palette.gradient) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(56.dp).background(Palette.gradient), contentAlignment = Alignment.Center) {
-                            Icon(moduleIcon(module.id), null, tint = Color.Black, modifier = Modifier.size(30.dp))
+                            Icon(moduleIcon(module.id), null, tint = Color.White, modifier = Modifier.size(30.dp))
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
@@ -51,7 +51,7 @@ fun ModuleScreen(module: Module, enabled: Boolean, onToggle: (Boolean) -> Unit, 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (module.alwaysOn) "TOUJOURS ACTIF" else if (enabled) "SYSTÈME ACTIVÉ" else "SYSTÈME DÉSACTIVÉ",
-                            color = if (enabled) Palette.Orange else Palette.TextDim,
+                            color = if (enabled) Palette.Accent else Palette.TextDim,
                             fontWeight = FontWeight.Black,
                             fontSize = 13.sp,
                             letterSpacing = 1.5.sp,
@@ -84,7 +84,7 @@ private fun CommandRow(cmd: Command) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "/${cmd.name}",
-                color = Palette.Orange,
+                color = Palette.Accent,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,

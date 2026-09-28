@@ -1,6 +1,14 @@
 package com.bothostinger.app.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -44,7 +53,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Bouton principal : rectangle plein avec le dégradé orange. */
+/** Coins des boutons, comme sur Discord. */
+val ButtonShape = RoundedCornerShape(14.dp)
+
+/** Bouton principal façon Discord : plein, coins arrondis, dégradé orange. */
 @Composable
 fun GradientButton(
     text: String,
@@ -59,37 +71,39 @@ fun GradientButton(
         modifier
             .height(height.dp)
             .alpha(if (enabled) 1f else 0.35f)
-            .background(brush, RectangleShape)
+            .clip(ButtonShape)
+            .background(brush)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = Color.Black, modifier = Modifier.size(22.dp))
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
         }
-        Text(text.uppercase(), color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.5.sp)
+        Text(text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
     }
 }
 
-/** Bouton secondaire : contour orange. */
+/** Bouton secondaire façon Discord (« Connexion ») : foncé transparent, coins arrondis. */
 @Composable
 fun OutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
     Row(
         modifier
-            .height(48.dp)
-            .border(1.dp, Palette.gradientHorizontal, RectangleShape)
+            .height(52.dp)
+            .clip(ButtonShape)
+            .background(Palette.SecondaryButton)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = Palette.Orange, modifier = Modifier.size(18.dp))
+            Icon(icon, null, tint = Palette.Accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(text.uppercase(), color = Palette.Orange, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+        Text(text, color = Palette.Text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
     }
 }
 
@@ -99,12 +113,12 @@ fun SquareIconButton(icon: ImageVector, contentDescription: String, onClick: () 
     Box(
         modifier
             .size(44.dp)
-            .background(Palette.Surface)
-            .border(1.dp, Palette.Border)
+            .clip(ButtonShape)
+            .background(Palette.SecondaryButton)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = Palette.Orange, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription, tint = Palette.Accent, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -153,35 +167,46 @@ fun SquareToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: 
             .size(width = 48.dp, height = 26.dp)
             .alpha(if (enabled) 1f else 0.4f)
             .background(if (checked) Palette.gradientHorizontal else SolidColor(Palette.SurfaceHigh))
-            .border(1.dp, if (checked) Palette.Orange else Palette.Border)
+            .border(1.dp, if (checked) Palette.Accent else Palette.Border)
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
     ) {
         Box(
             Modifier
                 .offset(x = knob, y = 3.dp)
                 .size(20.dp)
-                .background(if (checked) Color.Black else Palette.TextDim)
+                .background(if (checked) Color.White else Palette.TextDim)
         )
     }
 }
 
-/** Choix sélectionnable (remplace les « chips » arrondies). */
+/** Choix sélectionnable, avec une icône dessinée optionnelle. */
 @Composable
-fun SquareChoice(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
+fun SquareChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    Row(
         modifier
-            .height(44.dp)
-            .background(if (selected) Color(0x26FF6A00) else Palette.Surface)
-            .border(1.dp, if (selected) Palette.gradientHorizontal else SolidColor(Palette.Border), RectangleShape)
+            .height(48.dp)
+            .clip(ButtonShape)
+            .background(if (selected) Palette.gradientHorizontal else SolidColor(Palette.SecondaryButton))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             label,
-            color = if (selected) Palette.Orange else Palette.Text,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 13.sp,
+            color = if (selected) Color.White else Palette.Text,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
             maxLines = 1,
         )
     }
@@ -212,19 +237,19 @@ fun SquareTextField(
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         singleLine = true,
-        shape = RoundedCornerShape(0.dp),
+        shape = ButtonShape,
         placeholder = { Text(placeholder, color = Palette.TextDim) },
         visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = if (password) KeyboardOptions(keyboardType = KeyboardType.Password) else KeyboardOptions.Default,
         trailingIcon = trailing,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Palette.Orange,
+            focusedBorderColor = Palette.Accent,
             unfocusedBorderColor = Palette.Border,
             disabledBorderColor = Palette.Border,
-            focusedContainerColor = Palette.Black,
-            unfocusedContainerColor = Palette.Black,
-            disabledContainerColor = Palette.Black,
-            cursorColor = Palette.Orange,
+            focusedContainerColor = Palette.SecondaryButton,
+            unfocusedContainerColor = Palette.SecondaryButton,
+            disabledContainerColor = Palette.SecondaryButton,
+            cursorColor = Palette.Accent,
             disabledTextColor = Palette.TextDim,
         ),
     )
@@ -248,7 +273,7 @@ fun TopBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -
 
 /** Petite étiquette carrée (ex. permission requise). */
 @Composable
-fun Badge(text: String, color: Color = Palette.Orange) {
+fun Badge(text: String, color: Color = Palette.Accent) {
     Box(
         Modifier
             .border(1.dp, color)
@@ -261,4 +286,63 @@ fun Badge(text: String, color: Color = Palette.Orange) {
 @Composable
 fun Hint(text: String, color: Color = Palette.TextDim) {
     Text(text, color = color, fontSize = 13.sp, lineHeight = 18.sp)
+}
+
+/** Pastille de statut dessinée à la main, comme celles de Discord. */
+@Composable
+fun StatusIcon(status: String, modifier: Modifier = Modifier.size(14.dp)) {
+    val color = when (status) {
+        "online" -> Palette.Green
+        "idle" -> Palette.Yellow
+        "dnd" -> Palette.Red
+        "streaming" -> Palette.Stream
+        else -> Palette.TextDim
+    }
+    Canvas(modifier) {
+        val r = size.minDimension / 2
+        val disc = Path().apply { addOval(Rect(center, r)) }
+        val cut = Path()
+        when (status) {
+            // Lune : disque moins un disque décalé en haut à gauche.
+            "idle" -> cut.addOval(Rect(Offset(center.x - r * 0.45f, center.y - r * 0.45f), r * 0.62f))
+            // Occupé : barre horizontale évidée.
+            "dnd" -> cut.addRoundRect(
+                RoundRect(
+                    Rect(Offset(center.x - r * 0.6f, center.y - r * 0.18f), Size(r * 1.2f, r * 0.36f)),
+                    CornerRadius(r * 0.18f),
+                )
+            )
+            // Invisible : anneau.
+            "invisible" -> cut.addOval(Rect(center, r * 0.45f))
+            // Stream : triangle « lecture ».
+            "streaming" -> cut.apply {
+                moveTo(center.x - r * 0.3f, center.y - r * 0.45f)
+                lineTo(center.x + r * 0.5f, center.y)
+                lineTo(center.x - r * 0.3f, center.y + r * 0.45f)
+                close()
+            }
+        }
+        drawPath(Path.combine(PathOperation.Difference, disc, cut), color)
+    }
+}
+
+/** Manette de jeu dessinée à la main (activité « Joue à »). */
+@Composable
+fun GamepadIcon(color: Color, modifier: Modifier = Modifier.size(18.dp)) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val body = Path().apply {
+            addRoundRect(RoundRect(Rect(Offset(0f, h * 0.22f), Size(w, h * 0.56f)), CornerRadius(h * 0.28f)))
+        }
+        val holes = Path().apply {
+            // Croix directionnelle
+            addRect(Rect(Offset(w * 0.16f, h * 0.45f), Size(w * 0.24f, h * 0.1f)))
+            addRect(Rect(Offset(w * 0.23f, h * 0.36f), Size(w * 0.1f, h * 0.28f)))
+            // Boutons
+            addOval(Rect(Offset(w * 0.7f, h * 0.42f), w * 0.055f))
+            addOval(Rect(Offset(w * 0.8f, h * 0.55f), w * 0.055f))
+        }
+        drawPath(Path.combine(PathOperation.Difference, body, holes), color)
+    }
 }

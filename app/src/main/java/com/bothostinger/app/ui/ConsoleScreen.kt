@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,19 +38,20 @@ fun ConsoleScreen(logs: List<LogLine>, onBack: () -> Unit, onClear: () -> Unit) 
             Box(
                 Modifier
                     .height(44.dp)
-                    .border(1.dp, Palette.Border)
+                    .clip(ButtonShape)
+                    .background(Palette.SecondaryButton)
                     .clickable(onClick = onClear)
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("EFFACER", color = Palette.Orange, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
+                Text("Effacer", color = Palette.Text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
         }
         Box(
             Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 .fillMaxSize()
-                .background(Palette.Black)
+                .background(Palette.Surface)
                 .border(1.dp, Palette.Border)
         ) {
             if (logs.isEmpty()) {
@@ -70,7 +72,7 @@ fun ConsoleScreen(logs: List<LogLine>, onBack: () -> Unit, onClear: () -> Unit) 
                     Row {
                         Text(
                             line.time,
-                            color = Palette.Orange,
+                            color = Palette.Accent,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(end = 10.dp),

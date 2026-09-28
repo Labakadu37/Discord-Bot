@@ -124,7 +124,7 @@ class WelcomeModule : Module(
             .replace("{mention}", mention(user.optString("id")))
             .replace("{server}", ctx.guildName(gid))
             .replace("{count}", count.toString())
-        val embed = Embeds.base(if (welcome) "👋 Bienvenue !" else "😢 Au revoir", text, if (welcome) Embeds.ORANGE else Embeds.RED)
+        val embed = Embeds.base(if (welcome) "👋 Bienvenue !" else "😢 Au revoir", text, if (welcome) Embeds.BLUE else Embeds.RED)
             .thumbnail(avatarUrl(user))
             .footer(if (welcome) "Membre n°$count" else "Nous sommes maintenant $count")
         rest.createMessage(cfg.getString("channel"), message(if (welcome) mention(user.optString("id")) else null, embed))

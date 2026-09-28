@@ -212,7 +212,7 @@ class BotService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(0xFFFF6A00.toInt())
+            .setColor(0xFF3D6BFF.toInt())
             .setContentTitle(title)
             .setContentText(if (s.conn == ConnState.ONLINE) "${s.guildCount} serveur(s) · BotHostinger" else "BotHostinger")
             .setContentIntent(openAppIntent())
@@ -226,7 +226,7 @@ class BotService : Service() {
     private fun errorNotification(reason: String): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(0xFFFF6A00.toInt())
+            .setColor(0xFF3D6BFF.toInt())
             .setContentTitle("Le bot s'est arrêté")
             .setContentText(reason)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reason))

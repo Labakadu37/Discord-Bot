@@ -76,5 +76,5 @@ app/src/main/java/com/bothostinger/app/
 │   ├── engine/             # moteur : commandes slash, interactions, boutons, embeds
 │   └── modules/            # les 12 systèmes du bot
 ├── data/                   # réglages de l'app + base de données JSON par serveur
-└── ui/                     # interface Jetpack Compose (noir et dégradé orange, tout carré)
+└── ui/                     # interface Jetpack Compose (noir et bleu, boutons façon Discord)
 ```
