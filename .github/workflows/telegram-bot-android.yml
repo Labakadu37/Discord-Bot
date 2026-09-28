@@ -1,0 +1,77 @@
+name: Bot Telegram Android (APK)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "telegram-bot/**"
+      - ".github/workflows/telegram-bot-android.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test sur émulateur
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Activer KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Compiler l'APK de test (x86_64)
+        working-directory: telegram-bot/android
+        run: ./gradlew assembleDebug -Pabis=x86_64
+      - name: Lancer sur l'émulateur
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: bash telegram-bot/android/ci/emulator-test.sh
+
+  build:
+    name: Compiler et publier l'APK
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compiler l'APK
+        working-directory: telegram-bot/android
+        run: |
+          ./gradlew assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk BotTelegram.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BotTelegram-apk
+          path: telegram-bot/android/BotTelegram.apk
+      - name: Publier dans les Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: bot-telegram-android
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Bot Telegram (Android)" \
+              --notes "Télécharge **BotTelegram.apk** depuis ton téléphone et installe-le. Toujours la dernière version."
+          fi
+          gh release upload "$TAG" telegram-bot/android/BotTelegram.apk --clobber

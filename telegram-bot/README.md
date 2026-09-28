@@ -13,10 +13,25 @@ Envoie un lien, le bot renvoie la vidéo (sans filigrane TikTok quand c'est poss
 - Commandes : `/start`, `/aide`, `/moi` (tes téléchargements), `/stats` (admins : utilisateurs, téléchargements, plateformes)
 - Base SQLite des utilisateurs et des statistiques
 
-## Installation
+## 📱 Sur ton téléphone Android (APK)
+
+1. Sur ton téléphone, ouvre la page **Releases** du dépôt GitHub → **Bot Telegram (Android)** → télécharge `BotTelegram.apk`.
+2. Ouvre le fichier et autorise « installer des applis inconnues » si Android le demande.
+3. Dans l'appli : colle le token de @BotFather (et ton ID pour `/stats`), appuie sur **▶ Démarrer**.
+4. Appuie sur **🔋 Ne pas couper le bot pour la batterie**, sinon Android finit par l'arrêter.
+
+Le bot tourne tant que la notification « Bot Telegram en marche » est là. Coche « Relancer le bot quand le téléphone redémarre » pour qu'il revienne tout seul.
+
+**Différences avec la version PC** (il n'y a pas ffmpeg sur Android) :
+- l'audio est envoyé dans son format d'origine (souvent M4A) au lieu du MP3 ;
+- sur YouTube, la vidéo est limitée à 360p (TikTok, Instagram, X… sont en qualité normale).
+
+L'APK est recompilé automatiquement par GitHub Actions à chaque modification du dossier `telegram-bot/` (workflow « Bot Telegram Android »). Pour le compiler toi-même : Android Studio ou `cd android && ./gradlew assembleRelease`.
+
+## 💻 Sur un PC ou un serveur
 
 1. Sur Telegram, parle à **@BotFather** → `/newbot` → récupère le token.
-2. Copie `.env.example` en `.env` et mets ton token dans `TELEGRAM_TOKEN` (et ton ID dans `ADMIN_IDS`, trouvable avec @userinfobot).
+2. Copie `.env.example` en `.env` et mets ton token dans `TELEGRAM_TOKEN` (et ton ID dans `ADMIN_IDS`, trouvable avec @userinfobot). Sans `.env`, le bot te pose les questions au premier lancement.
 3. Lance :
 
 **Avec Docker (recommandé, ffmpeg inclus)**

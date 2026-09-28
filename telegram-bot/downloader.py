@@ -1,6 +1,7 @@
 """Téléchargement des vidéos/audios avec yt-dlp (TikTok, Instagram, YouTube, X, ...)."""
 
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -40,6 +41,15 @@ VIDEO_FORMATS = [
 ]
 AUDIO_FORMAT = "ba/b"
 
+# Sans ffmpeg (ex. sur Android) : pas de fusion vidéo+audio ni de conversion MP3,
+# donc on prend des fichiers déjà complets et l'audio d'origine (m4a).
+VIDEO_FORMATS_NO_FFMPEG = [
+    "b[height<=1080][ext=mp4]/b[height<=1080]/b",
+    "b[height<=720][ext=mp4]/b[height<=720]",
+    "b[height<=480]/worst",
+]
+AUDIO_FORMAT_NO_FFMPEG = "ba[ext=m4a]/ba[ext=mp3]/ba/b"
+
 MAX_FILES = 10  # carrousels Instagram, threads X, etc.
 
 
@@ -78,7 +88,14 @@ def _base_options(folder: Path, max_bytes: int) -> dict:
     cookies = os.getenv("COOKIES_FILE")
     if cookies and Path(cookies).is_file():
         opts["cookiefile"] = cookies
+    ffmpeg = os.getenv("FFMPEG_LOCATION")
+    if ffmpeg:
+        opts["ffmpeg_location"] = ffmpeg
     return opts
+
+
+def has_ffmpeg() -> bool:
+    return bool(os.getenv("FFMPEG_LOCATION") or shutil.which("ffmpeg"))
 
 
 def _entries(info: dict) -> list[dict]:
@@ -117,17 +134,22 @@ def _clear(folder: Path) -> None:
 
 def download(url: str, folder: Path, audio_only: bool, max_bytes: int) -> list[Media]:
     """Télécharge le lien dans `folder`. Bloquant : à appeler dans un thread."""
-    attempts = [AUDIO_FORMAT] if audio_only else VIDEO_FORMATS
+    ffmpeg = has_ffmpeg()
+    if audio_only:
+        attempts = [AUDIO_FORMAT if ffmpeg else AUDIO_FORMAT_NO_FFMPEG]
+    else:
+        attempts = VIDEO_FORMATS if ffmpeg else VIDEO_FORMATS_NO_FFMPEG
+    too_big = False
     for fmt in attempts:
         opts = _base_options(folder, max_bytes)
         opts["format"] = fmt
-        if audio_only:
+        if ffmpeg and audio_only:
             opts["postprocessors"] = [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
                 "preferredquality": "192",
             }]
-        else:
+        elif ffmpeg:
             opts["merge_output_format"] = "mp4"
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -150,6 +172,9 @@ def download(url: str, folder: Path, audio_only: bool, max_bytes: int) -> list[M
         media = _collect(folder, info, not audio_only, max_bytes)
         if media:
             return media
+        too_big = True
         _clear(folder)  # trop lourd : on réessaie en qualité plus basse
+    if not too_big:
+        raise DownloadError("❌ Aucun format téléchargeable pour ce lien.")
     limit_mb = max_bytes // (1024 * 1024)
     raise DownloadError(f"📦 Le fichier dépasse {limit_mb} Mo, même en basse qualité.")

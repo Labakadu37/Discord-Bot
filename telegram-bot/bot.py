@@ -5,13 +5,13 @@ import logging
 import os
 import re
 import secrets
+import sys
 import tempfile
 from pathlib import Path
 
-from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, InputMediaVideo, Update
 from telegram.constants import ChatAction, ParseMode
-from telegram.error import TelegramError
+from telegram.error import InvalidToken, TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -22,9 +22,10 @@ from telegram.ext import (
 )
 
 import downloader
+from first_run import FROZEN, load_config
 from storage import Storage
 
-load_dotenv()
+load_config()
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("bot")
@@ -38,7 +39,7 @@ MAX_BYTES = (2000 if LOCAL_API else 50) * 1024 * 1024
 URL_RE = re.compile(r"https?://[^\s<>\"]+")
 MAX_PENDING_LINKS = 20
 
-db = Storage(os.getenv("DB_PATH", "data/bot.db"))
+db = Storage(os.environ["DB_PATH"])
 slots = asyncio.Semaphore(int(os.getenv("MAX_PARALLEL", "3")))
 
 PLATFORM_LIST = "TikTok, Instagram, YouTube, X (Twitter), Facebook, Snapchat, Pinterest, Reddit, Threads, Twitch, Vimeo, SoundCloud…"
@@ -186,7 +187,11 @@ async def send_media(context: ContextTypes.DEFAULT_TYPE, chat_id: int, media: li
     if audio_only:
         for m in media:
             with m.path.open("rb") as f:
-                await bot.send_audio(chat_id, f, title=m.title, duration=m.duration)
+                if m.path.suffix.lower() in {".mp3", ".m4a"}:
+                    await bot.send_audio(chat_id, f, title=m.title, duration=m.duration)
+                else:
+                    # Sans ffmpeg (Android), impossible d'extraire le son d'une vidéo.
+                    await bot.send_document(chat_id, f, caption="🎵 Pas d'audio séparé pour ce lien, voici le fichier d'origine.")
         return
 
     if len(media) > 1:
@@ -216,7 +221,7 @@ async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     log.error("Erreur non gérée", exc_info=context.error)
 
 
-def main() -> None:
+def main(**polling_options) -> None:
     builder = (
         Application.builder()
         .token(TOKEN)
@@ -238,8 +243,21 @@ def main() -> None:
     app.add_error_handler(on_error)
 
     log.info("Bot démarré (limite %d Mo)", MAX_BYTES // (1024 * 1024))
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.run_polling(allowed_updates=Update.ALL_TYPES, **polling_options)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except InvalidToken:
+        log.error("Token refusé par Telegram. Supprime le fichier .env et relance pour en mettre un autre.")
+    except Exception:
+        log.exception("Le bot s'est arrêté")
+    finally:
+        if FROZEN:
+            # Sinon la fenêtre du .exe se ferme avant qu'on puisse lire l'erreur.
+            try:
+                input("\nAppuie sur Entrée pour fermer...")
+            except (EOFError, KeyboardInterrupt):
+                pass
+        sys.exit(0)
