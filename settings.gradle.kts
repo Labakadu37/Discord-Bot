@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PocketBot"
+rootProject.name = "BotHostinger"
 include(":app")

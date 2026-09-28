@@ -30,15 +30,15 @@ jobs:
         run: ./gradlew assembleRelease
 
       - name: Renommer
-        run: cp app/build/outputs/apk/release/app-release.apk PocketBot.apk
+        run: cp app/build/outputs/apk/release/app-release.apk BotHostinger.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PocketBot-apk
-          path: PocketBot.apk
+          name: BotHostinger-apk
+          path: BotHostinger.apk
 
       - name: Publier une release (tags v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: PocketBot.apk
+          files: BotHostinger.apk

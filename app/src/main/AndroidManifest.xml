@@ -15,7 +15,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PocketBot">
+        android:theme="@style/Theme.BotHostinger">
 
         <activity
             android:name=".MainActivity"
@@ -33,7 +33,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Garde la connexion WebSocket du bot Discord ouverte" />
+                android:value="Garde la connexion WebSocket du bot Discord ouverte (hébergement du bot sur le téléphone)" />
         </service>
 
         <receiver

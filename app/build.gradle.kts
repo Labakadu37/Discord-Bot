@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.pocketbot.app"
+    namespace = "com.bothostinger.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.pocketbot.app"
+        applicationId = "com.bothostinger.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
