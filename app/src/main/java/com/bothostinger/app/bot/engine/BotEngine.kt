@@ -5,7 +5,10 @@ import com.bothostinger.app.bot.ConnState
 import com.bothostinger.app.bot.DiscordGateway
 import com.bothostinger.app.bot.DiscordRest
 import com.bothostinger.app.bot.GatewayListener
+import com.bothostinger.app.bot.GuildSummary
+import com.bothostinger.app.data.objects
 import com.bothostinger.app.data.str
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -13,6 +16,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Le cerveau du bot : reçoit les évènements du Gateway, les distribue aux
@@ -20,14 +24,34 @@ import org.json.JSONObject
  */
 class BotEngine(private val ctx: BotContext, allModules: List<Module>) : GatewayListener {
 
-    val modules: List<Module> = allModules.filter { it.alwaysOn || it.id in ctx.enabledModules }
-    private val commands: Map<String, Command> = modules.flatMap { it.commands }.associateBy { it.name }
+    val modules: List<Module> = allModules
+        .filter { it.alwaysOn || it.id in ctx.enabledModules }
+        .onEach { it.ctx = ctx }
+
+    /**
+     * Commandes intégrées d'abord : une commande du Studio ne peut pas remplacer une commande du bot.
+     * Discord accepte au plus [MAX_COMMANDS] commandes par bot.
+     */
+    private val commands: Map<String, Command> = LinkedHashMap<String, Command>().apply {
+        modules.sortedBy { if (it.id == "studio") 1 else 0 }
+            .flatMap { it.commands }
+            .forEach { if (size < MAX_COMMANDS) putIfAbsent(it.name, it) }
+    }
+
+    /** Commandes et boutons : en parallèle. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val workers = Dispatchers.IO.limitedParallelism(6)
+
+    /**
+     * Évènements (messages, vocal, réactions…) : une file par serveur, pour qu'ils
+     * soient traités dans l'ordre où Discord les envoie (comptage, vocaux temporaires…).
+     */
+    private val lanes = ConcurrentHashMap<String, CoroutineDispatcher>()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val workers = Dispatchers.IO.limitedParallelism(4)
+    private fun lane(guildId: String): CoroutineDispatcher = lanes.getOrPut(guildId) { Dispatchers.IO.limitedParallelism(1) }
 
     init {
-        modules.forEach { it.ctx = ctx }
         ctx.modules = modules
     }
 
@@ -35,7 +59,10 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
         get() {
             var i = DiscordGateway.INTENT_GUILDS
             if (modules.any { it.needsMembersIntent }) i = i or DiscordGateway.INTENT_GUILD_MEMBERS
-            if (modules.any { it.needsMessages }) i = i or DiscordGateway.INTENT_GUILD_MESSAGES
+            if (modules.any { it.needsMessages || it.needsMessageContent }) i = i or DiscordGateway.INTENT_GUILD_MESSAGES
+            if (modules.any { it.needsMessageContent }) i = i or DiscordGateway.INTENT_MESSAGE_CONTENT
+            if (modules.any { it.needsReactions }) i = i or DiscordGateway.INTENT_GUILD_MESSAGE_REACTIONS
+            if (modules.any { it.needsVoice }) i = i or DiscordGateway.INTENT_GUILD_VOICE_STATES
             return i
         }
 
@@ -54,6 +81,7 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
                         .onFailure { BotRuntime.log("Erreur ${m.title} : ${it.message}", isError = true) }
                 }
                 runCatching { ctx.db.flush() }
+                ctx.stats.publish()
             }
         }
     }
@@ -97,11 +125,12 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
     override fun onDispatch(type: String, d: JSONObject) {
         // Mise à jour du cache tout de suite (dans l'ordre), le reste en parallèle.
         updateCache(type, d)
-        ctx.scope.launch(workers) {
-            if (type == "INTERACTION_CREATE") {
-                handleInteraction(d)
-                return@launch
-            }
+        if (type == "INTERACTION_CREATE") {
+            ctx.scope.launch(workers) { handleInteraction(d) }
+            return
+        }
+        val guildId = d.str("guild_id") ?: if (type.startsWith("GUILD_")) d.optString("id") else "global"
+        ctx.scope.launch(lane(guildId)) {
             modules.forEach { m ->
                 runCatching { m.onEvent(type, d) }
                     .onFailure { BotRuntime.log("Erreur ${m.title} ($type) : ${it.message}", isError = true) }
@@ -114,7 +143,7 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
             "GUILD_CREATE", "GUILD_UPDATE" -> {
                 val id = d.getString("id")
                 val existing = ctx.guilds[id]
-                ctx.guilds[id] = GuildInfo(
+                val info = GuildInfo(
                     id = id,
                     name = d.optString("name"),
                     icon = d.str("icon"),
@@ -125,13 +154,45 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
                     boosts = d.optInt("premium_subscription_count"),
                     boostTier = d.optInt("premium_tier"),
                 )
-                BotRuntime.update { it.copy(guildCount = maxOf(it.guildCount, ctx.guilds.size)) }
+                existing?.let { info.roles.putAll(it.roles); info.channels.putAll(it.channels) }
+                existing?.let { info.rolePermissions.putAll(it.rolePermissions) }
+                d.optJSONArray("roles")?.objects()?.let { roles ->
+                    info.roles.clear()
+                    info.rolePermissions.clear()
+                    roles.forEach {
+                        info.roles[it.getString("id")] = it.optString("name")
+                        info.rolePermissions[it.getString("id")] = it.optString("permissions").toLongOrNull() ?: 0L
+                    }
+                }
+                d.optJSONArray("channels")?.objects()?.let { channels ->
+                    info.channels.clear()
+                    channels.forEach { info.channels[it.getString("id")] = ChannelInfo(it.optString("name"), it.optInt("type")) }
+                }
+                ctx.guilds[id] = info
+                publishGuilds()
             }
+            "GUILD_ROLE_CREATE", "GUILD_ROLE_UPDATE" -> d.optJSONObject("role")?.let { role ->
+                d.str("guild_id")?.let { ctx.guilds[it] }?.let { g ->
+                    g.roles[role.getString("id")] = role.optString("name")
+                    g.rolePermissions[role.getString("id")] = role.optString("permissions").toLongOrNull() ?: 0L
+                }
+            }
+            "GUILD_ROLE_DELETE" -> d.str("guild_id")?.let { ctx.guilds[it] }?.let { g ->
+                g.roles.remove(d.optString("role_id"))
+                g.rolePermissions.remove(d.optString("role_id"))
+            }
+            "CHANNEL_CREATE", "CHANNEL_UPDATE" -> d.str("guild_id")?.let { ctx.guilds[it] }?.channels
+                ?.put(d.getString("id"), ChannelInfo(d.optString("name"), d.optInt("type")))
+            "CHANNEL_DELETE" -> d.str("guild_id")?.let { ctx.guilds[it] }?.channels?.remove(d.optString("id"))
+            "MESSAGE_CREATE" -> ctx.stats.messages.incrementAndGet()
             "GUILD_DELETE" -> if (!d.optBoolean("unavailable", false)) {
                 ctx.guilds.remove(d.getString("id"))
-                BotRuntime.update { it.copy(guildCount = ctx.guilds.size) }
+                publishGuilds()
             }
-            "GUILD_MEMBER_ADD" -> d.str("guild_id")?.let { ctx.guilds[it] }?.let { it.memberCount++ }
+            "GUILD_MEMBER_ADD" -> {
+                ctx.stats.joins.incrementAndGet()
+                d.str("guild_id")?.let { ctx.guilds[it] }?.let { it.memberCount++ }
+            }
             "GUILD_MEMBER_REMOVE" -> d.str("guild_id")?.let { ctx.guilds[it] }?.let { it.memberCount = maxOf(0, it.memberCount - 1) }
         }
     }
@@ -153,9 +214,11 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
                         return
                     }
                     BotRuntime.log("/${i.name}${i.subcommand?.let { " $it" }.orEmpty()} par ${displayName(i.user)}")
+                    ctx.stats.command(i.name)
                     cmd.run(i)
                 }
                 3 -> if (modules.none { it.onComponent(i) }) i.error("Ce bouton n'est plus actif.")
+                5 -> if (modules.none { it.onModal(i) }) i.error("Ce formulaire n'est plus actif.")
             }
         } catch (e: DiscordRest.ApiException) {
             respondError(i, e.friendly())
@@ -165,11 +228,17 @@ class BotEngine(private val ctx: BotContext, allModules: List<Module>) : Gateway
         }
     }
 
+    private fun publishGuilds() {
+        val list = ctx.guilds.values.map { GuildSummary(it.id, it.name, it.memberCount, guildIconUrl(it.id, it.icon)) }.sortedBy { it.name.lowercase() }
+        BotRuntime.update { it.copy(guildCount = list.size, guilds = list) }
+    }
+
     private fun respondError(i: Interaction, text: String) {
         runCatching { i.error(text) }
     }
 
     companion object {
         const val TICK_MS = 10_000L
+        const val MAX_COMMANDS = 100
     }
 }

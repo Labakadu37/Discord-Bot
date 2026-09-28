@@ -88,7 +88,7 @@ fun HomeScreen(
                 Alert("Ajoute le token de ton bot pour commencer.", "Paramètres") { onOpen("settings") }
             }
         }
-        if (runtime.missingMembersIntent && running) {
+        if (runtime.missingIntents.isNotEmpty() && running) {
             full {
                 Alert(
                     "« SERVER MEMBERS INTENT » désactivé : bienvenue, au revoir, autorôle et logs d'arrivée sont en pause.",

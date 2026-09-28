@@ -34,9 +34,12 @@ interface GatewayListener {
 class DiscordGateway(
     private val token: String,
     private var presence: JSONObject,
-    private var intents: Int,
-    /** Intents à retirer si Discord les refuse (code 4014) au lieu d'arrêter le bot. */
-    private val optionalPrivilegedIntents: Int,
+    private val requestedIntents: Int,
+    /**
+     * Intents privilégiés facultatifs (membres, contenu des messages). Si Discord
+     * les refuse (code 4014), le bot essaie sans eux au lieu de s'arrêter.
+     */
+    private val optionalPrivilegedIntents: List<Int>,
     private val listener: GatewayListener,
     private val onFatal: (String) -> Unit,
     private val gatewayUrl: String = GATEWAY,
@@ -62,6 +65,17 @@ class DiscordGateway(
     private var lastBeatAt = 0L
     private var stopped = false
     private var failures = 0
+
+    /** Combinaisons d'intents facultatifs à retirer, essayées dans l'ordre après chaque refus 4014. */
+    private val fallbacks: List<Int> = buildList {
+        val opts = optionalPrivilegedIntents.filter { requestedIntents and it != 0 }
+        // D'abord chacun seul, puis tous ensemble.
+        opts.forEach { add(it) }
+        if (opts.size > 1) add(opts.fold(0) { acc, i -> acc or i })
+    }
+    private var fallbackIndex = -1
+    private val intents: Int
+        get() = if (fallbackIndex < 0) requestedIntents else requestedIntents and fallbacks[fallbackIndex].inv()
 
     fun start() {
         scope.launch { connect() }
@@ -121,12 +135,13 @@ class DiscordGateway(
             4004 -> return fatal("Token invalide. Vérifie le token dans les paramètres.")
             4013 -> return fatal("Intents invalides (erreur 4013).")
             4014 -> {
-                if (intents and optionalPrivilegedIntents != 0) {
-                    intents = intents and optionalPrivilegedIntents.inv()
-                    BotRuntime.update { it.copy(missingMembersIntent = true) }
+                if (fallbackIndex + 1 < fallbacks.size) {
+                    fallbackIndex++
+                    val removed = fallbacks[fallbackIndex]
+                    BotRuntime.update { it.copy(missingIntents = intentNames(removed)) }
                     BotRuntime.log(
-                        "« SERVER MEMBERS INTENT » n'est pas activé : bienvenue, au revoir et autorôle sont en pause. " +
-                            "Active-le sur discord.com/developers → Bot.",
+                        "Discord refuse ${intentNames(removed).joinToString(" et ") { "« $it »" }} : " +
+                            "le bot démarre sans (active-les sur discord.com/developers → Bot).",
                         isError = true,
                     )
                     sessionId = null
@@ -291,6 +306,17 @@ class DiscordGateway(
 
         const val INTENT_GUILDS = 1 shl 0
         const val INTENT_GUILD_MEMBERS = 1 shl 1
+        const val INTENT_GUILD_VOICE_STATES = 1 shl 7
         const val INTENT_GUILD_MESSAGES = 1 shl 9
+        const val INTENT_GUILD_MESSAGE_REACTIONS = 1 shl 10
+        const val INTENT_MESSAGE_CONTENT = 1 shl 15
+
+        const val NAME_MEMBERS = "SERVER MEMBERS INTENT"
+        const val NAME_CONTENT = "MESSAGE CONTENT INTENT"
+
+        fun intentNames(intents: Int): Set<String> = buildSet {
+            if (intents and INTENT_GUILD_MEMBERS != 0) add(NAME_MEMBERS)
+            if (intents and INTENT_MESSAGE_CONTENT != 0) add(NAME_CONTENT)
+        }
     }
 }

@@ -65,6 +65,9 @@ class DiscordRest(
         request("PATCH", "/channels/$channelId/messages/$messageId", payload.toString())
     }
 
+    fun getMessage(channelId: String, messageId: String): JSONObject =
+        JSONObject(request("GET", "/channels/$channelId/messages/$messageId", null))
+
     fun deleteMessage(channelId: String, messageId: String, reason: String? = null) {
         request("DELETE", "/channels/$channelId/messages/$messageId", null, reason)
     }
@@ -105,6 +108,12 @@ class DiscordRest(
     /** [untilIso] null = retirer l'exclusion temporaire. */
     fun timeout(guildId: String, userId: String, untilIso: String?, reason: String?) {
         val body = JSONObject().put("communication_disabled_until", untilIso ?: JSONObject.NULL)
+        request("PATCH", "/guilds/$guildId/members/$userId", body.toString(), reason)
+    }
+
+    /** Déplace un membre dans un salon vocal (null = le déconnecter). */
+    fun moveMember(guildId: String, userId: String, channelId: String?, reason: String? = null) {
+        val body = JSONObject().put("channel_id", channelId ?: JSONObject.NULL)
         request("PATCH", "/guilds/$guildId/members/$userId", body.toString(), reason)
     }
 

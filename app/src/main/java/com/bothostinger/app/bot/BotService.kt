@@ -89,14 +89,15 @@ class BotService : Service() {
 
     private fun startBot() {
         promote()
-        val settings = SettingsStore(this).load()
+        val store = SettingsStore(this)
+        val settings = store.load()
         if (settings.token.isBlank()) {
             BotRuntime.log("Aucun token configuré.", isError = true)
             stopBot()
             return
         }
         acquireWakeLock()
-        BotRuntime.update { it.copy(missingMembersIntent = false, error = null) }
+        BotRuntime.update { it.copy(missingIntents = emptySet(), error = null) }
         BotRuntime.log("Démarrage du bot…")
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -107,12 +108,12 @@ class BotService : Service() {
             scope = scope,
             enabledModules = enabled,
         )
-        val engine = BotEngine(ctx, Modules.all())
+        val engine = BotEngine(ctx, Modules.all(store.loadStudio()))
         val gateway = DiscordGateway(
             token = settings.token,
             presence = Presence.json(settings),
-            intents = engine.intents,
-            optionalPrivilegedIntents = DiscordGateway.INTENT_GUILD_MEMBERS,
+            requestedIntents = engine.intents,
+            optionalPrivilegedIntents = listOf(DiscordGateway.INTENT_MESSAGE_CONTENT, DiscordGateway.INTENT_GUILD_MEMBERS),
             listener = engine,
             onFatal = { reason -> uiScope.launch { onFatal(reason) } },
             client = http,

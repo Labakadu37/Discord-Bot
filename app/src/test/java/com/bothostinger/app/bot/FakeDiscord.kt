@@ -23,6 +23,9 @@ class FakeDiscord {
     /** Messages renvoyés par GET /channels/{id}/messages. */
     var channelMessages: JSONArray = JSONArray()
 
+    /** Message renvoyé par GET /channels/{id}/messages/{id}. */
+    var singleMessage: JSONObject = JSONObject().put("id", "m").put("content", "")
+
     init {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -30,6 +33,7 @@ class FakeDiscord {
                 val call = Call(request.method!!, path, request.body.readUtf8(), request.getHeader("X-Audit-Log-Reason"))
                 calls += call
                 val body = when {
+                    call.method == "GET" && path.matches(Regex("/channels/[^/]+/messages/[^/?]+")) -> singleMessage.toString()
                     call.method == "GET" && path.contains("/messages") -> channelMessages.toString()
                     call.method == "POST" && path.endsWith("/messages") -> JSONObject().put("id", "msg${nextId++}").toString()
                     call.method == "POST" && path.matches(Regex("/guilds/[^/]+/channels")) -> JSONObject().put("id", "${nextId++}").toString()

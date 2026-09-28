@@ -69,8 +69,8 @@ class GatewayTest {
         gateway = DiscordGateway(
             token = settings.token,
             presence = Presence.json(settings),
-            intents = intents,
-            optionalPrivilegedIntents = DiscordGateway.INTENT_GUILD_MEMBERS,
+            requestedIntents = intents,
+            optionalPrivilegedIntents = listOf(DiscordGateway.INTENT_MESSAGE_CONTENT, DiscordGateway.INTENT_GUILD_MEMBERS),
             listener = listener,
             onFatal = onFatal,
             gatewayUrl = server.url("/").toString().replace("http", "ws"),
@@ -117,7 +117,20 @@ class GatewayTest {
         assertEquals(2, identifies.size)
         assertEquals(all, identifies[0].getInt("intents"))
         assertEquals(DiscordGateway.INTENT_GUILDS or DiscordGateway.INTENT_GUILD_MESSAGES, identifies[1].getInt("intents"))
-        assertTrue(BotRuntime.state.value.missingMembersIntent)
+        assertEquals(setOf(DiscordGateway.NAME_MEMBERS), BotRuntime.state.value.missingIntents)
+    }
+
+    @Test
+    fun bothPrivilegedIntentsMissingTriesEachThenBoth() {
+        closeCodes += listOf(4014, 4014, 4014)
+        startServer()
+        val c = DiscordGateway.INTENT_MESSAGE_CONTENT
+        val m = DiscordGateway.INTENT_GUILD_MEMBERS
+        val all = DiscordGateway.INTENT_GUILDS or DiscordGateway.INTENT_GUILD_MESSAGES or c or m
+        connect(all)
+        assertTrue(ready.await(10, TimeUnit.SECONDS))
+        assertEquals(listOf(all, all and c.inv(), all and m.inv(), all and c.inv() and m.inv()), identifies.map { it.getInt("intents") })
+        assertEquals(setOf(DiscordGateway.NAME_MEMBERS, DiscordGateway.NAME_CONTENT), BotRuntime.state.value.missingIntents)
     }
 
     @Test

@@ -6,7 +6,17 @@ import com.bothostinger.app.data.strings
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Commande slash ou clic sur un bouton, avec des raccourcis pour lire les options et répondre. */
+class ModalField(
+    val id: String,
+    val label: String,
+    val paragraph: Boolean = false,
+    val required: Boolean = true,
+    val value: String? = null,
+    val placeholder: String? = null,
+    val maxLength: Int = if (paragraph) 4000 else 256,
+)
+
+/** Commande slash, clic sur un bouton ou formulaire envoyé, avec des raccourcis pour lire les options et répondre. */
 class Interaction(val raw: JSONObject, private val rest: DiscordRest) {
     val id: String = raw.getString("id")
     val token: String = raw.getString("token")
@@ -60,6 +70,24 @@ class Interaction(val raw: JSONObject, private val rest: DiscordRest) {
     fun role(name: String): JSONObject? = resolved("roles", snowflake(name))
     fun channel(name: String): JSONObject? = resolved("channels", snowflake(name))
 
+    /** Valeurs d'un formulaire (modal) envoyé : champ → texte saisi. */
+    val modalValues: Map<String, String> by lazy {
+        val out = HashMap<String, String>()
+        data.optJSONArray("components")?.let { rows ->
+            for (r in 0 until rows.length()) {
+                val comps = rows.optJSONObject(r)?.optJSONArray("components") ?: continue
+                for (c in 0 until comps.length()) {
+                    val comp = comps.getJSONObject(c)
+                    out[comp.optString("custom_id")] = comp.optString("value")
+                }
+            }
+        }
+        out
+    }
+
+    /** Valeurs choisies dans un menu déroulant. */
+    val selectedValues: List<String> by lazy { data.optJSONArray("values")?.strings() ?: emptyList() }
+
     // ------------------------------------------------------------ membre qui interagit
 
     val permissions: Long = member?.optString("permissions")?.toLongOrNull() ?: 0L
@@ -106,6 +134,26 @@ class Interaction(val raw: JSONObject, private val rest: DiscordRest) {
     fun updateMessage(embed: JSONObject?, components: JSONArray?) {
         val data = message(null, embed, components ?: JSONArray())
         rest.interactionCallback(id, token, JSONObject().put("type", 7).put("data", data))
+        state = REPLIED
+    }
+
+    /** Ouvre un formulaire (modal) Discord. [fields] : (id, libellé, long texte ?, obligatoire ?, valeur par défaut). */
+    fun showModal(customId: String, title: String, fields: List<ModalField>) {
+        val rows = JSONArray()
+        fields.take(5).forEach { f ->
+            val input = JSONObject()
+                .put("type", 4)
+                .put("custom_id", f.id)
+                .put("label", f.label.take(45))
+                .put("style", if (f.paragraph) 2 else 1)
+                .put("required", f.required)
+                .put("max_length", f.maxLength)
+            if (!f.placeholder.isNullOrBlank()) input.put("placeholder", f.placeholder.take(100))
+            if (!f.value.isNullOrBlank()) input.put("value", f.value.take(f.maxLength))
+            rows.put(JSONObject().put("type", 1).put("components", JSONArray().put(input)))
+        }
+        val data = JSONObject().put("custom_id", customId).put("title", title.take(45)).put("components", rows)
+        rest.interactionCallback(id, token, JSONObject().put("type", 9).put("data", data))
         state = REPLIED
     }
 

@@ -1,6 +1,7 @@
 package com.bothostinger.app.bot.modules
 
 import com.bothostinger.app.bot.BotRuntime
+import com.bothostinger.app.bot.DiscordGateway
 import com.bothostinger.app.bot.engine.Command
 import com.bothostinger.app.bot.engine.Embeds
 import com.bothostinger.app.bot.engine.Interaction
@@ -71,7 +72,7 @@ class WelcomeModule : Module(
                 val channel = i.snowflake("salon") ?: return
                 val text = i.string("message") ?: default
                 db.edit(gid) { g -> g.obj("config").put(key, JSONObject().put("channel", channel).put("message", text)) }
-                val warning = if (BotRuntime.state.value.missingMembersIntent) {
+                val warning = if (DiscordGateway.NAME_MEMBERS in BotRuntime.state.value.missingIntents) {
                     "\n\n⚠️ « SERVER MEMBERS INTENT » n'est pas activé sur le portail développeur : active-le puis redémarre le bot."
                 } else ""
                 i.success("Activé dans ${channelMention(channel)}.$warning")

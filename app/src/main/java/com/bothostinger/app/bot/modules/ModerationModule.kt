@@ -14,6 +14,9 @@ import com.bothostinger.app.bot.engine.mention
 import com.bothostinger.app.bot.engine.message
 import com.bothostinger.app.bot.engine.msToIso
 import com.bothostinger.app.bot.engine.parseDuration
+import com.bothostinger.app.bot.engine.roleMention
+import com.bothostinger.app.bot.engine.roleOpt
+import com.bothostinger.app.bot.engine.sub
 import com.bothostinger.app.bot.engine.snowflakeTime
 import com.bothostinger.app.bot.engine.stringOpt
 import com.bothostinger.app.bot.engine.textChannelOpt
@@ -60,6 +63,20 @@ class ModerationModule : Module(
         Command("warns", "Voir les avertissements d'un membre", Perm.MODERATE, listOf(userOpt("membre", "Le membre"))) { warns(it) },
         Command("resetwarns", "Effacer les avertissements d'un membre", Perm.MODERATE, listOf(userOpt("membre", "Le membre"))) {
             resetWarns(it)
+        },
+        Command(
+            "role", "Donner ou retirer un rôle à un membre", Perm.MANAGE_ROLES,
+            listOf(
+                sub("ajouter", "Donner un rôle", userOpt("membre", "Le membre"), roleOpt("role", "Le rôle")),
+                sub("retirer", "Retirer un rôle", userOpt("membre", "Le membre"), roleOpt("role", "Le rôle")),
+            ),
+        ) { i ->
+            val uid = i.snowflake("membre") ?: return@Command
+            val role = i.snowflake("role") ?: return@Command
+            if (i.role("role")?.optBoolean("managed") == true || role == i.guildId) return@Command i.error("Ce rôle ne peut pas être donné par un bot.")
+            if (i.subcommand == "ajouter") rest.addRole(i.guildId!!, uid, role, auditReason(i)) else rest.removeRole(i.guildId!!, uid, role, auditReason(i))
+            i.success(if (i.subcommand == "ajouter") "${roleMention(role)} donné à ${mention(uid)}." else "${roleMention(role)} retiré à ${mention(uid)}.")
+            logAction(i, if (i.subcommand == "ajouter") "Rôle donné" else "Rôle retiré", mention(uid), roleMention(role))
         },
         Command(
             "slowmode", "Mode lent du salon", Perm.MANAGE_CHANNELS,

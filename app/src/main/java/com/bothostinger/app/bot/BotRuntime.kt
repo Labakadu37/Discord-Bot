@@ -15,12 +15,25 @@ data class RuntimeState(
     val botName: String? = null,
     val applicationId: String? = null,
     val guildCount: Int = 0,
+    val guilds: List<GuildSummary> = emptyList(),
     val latencyMs: Long = -1,
     val onlineSince: Long = 0,
-    /** « SERVER MEMBERS INTENT » non activé : bienvenue, au revoir et autorôle ne marchent pas. */
-    val missingMembersIntent: Boolean = false,
+    /** Intents privilégiés refusés par Discord (ex. « MESSAGE CONTENT INTENT ») : les systèmes qui en dépendent sont en pause. */
+    val missingIntents: Set<String> = emptySet(),
     val error: String? = null,
 )
+
+data class GuildSummary(val id: String, val name: String, val members: Int, val icon: String?)
+
+/** Activité depuis le démarrage du bot. */
+data class BotStats(
+    val commands: Map<String, Long> = emptyMap(),
+    val messages: Long = 0,
+    val joins: Long = 0,
+    val automod: Long = 0,
+) {
+    val totalCommands: Long get() = commands.values.sum()
+}
 
 data class LogLine(val time: String, val text: String, val isError: Boolean)
 
@@ -35,7 +48,14 @@ object BotRuntime {
     private val _logs = MutableStateFlow<List<LogLine>>(emptyList())
     val logs: StateFlow<List<LogLine>> = _logs.asStateFlow()
 
+    private val _stats = MutableStateFlow(BotStats())
+    val stats: StateFlow<BotStats> = _stats.asStateFlow()
+
     fun update(transform: (RuntimeState) -> RuntimeState) = _state.update(transform)
+
+    fun updateStats(s: BotStats) {
+        _stats.value = s
+    }
 
     fun log(text: String, isError: Boolean = false) {
         val line = LogLine(timeFormat.format(Date()), text, isError)
