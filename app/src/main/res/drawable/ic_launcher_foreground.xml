@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- antenne -->
+    <path android:fillColor="#FFFFFF" android:pathData="M52,30h4v8h-4z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M54,24m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <!-- tête -->
+    <path android:fillColor="#FFFFFF" android:pathData="M38,38h32a8,8 0,0 1,8 8v20a8,8 0,0 1,-8 8h-32a8,8 0,0 1,-8 -8v-20a8,8 0,0 1,8 -8z" />
+    <!-- yeux -->
+    <path android:fillColor="#5865F2" android:pathData="M45,54m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+    <path android:fillColor="#5865F2" android:pathData="M63,54m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+    <!-- bouche -->
+    <path android:fillColor="#5865F2" android:pathData="M46,64h16v3h-16z" />
+    <!-- oreilles -->
+    <path android:fillColor="#FFFFFF" android:pathData="M25,50h4v12h-4z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M79,50h4v12h-4z" />
+</vector>

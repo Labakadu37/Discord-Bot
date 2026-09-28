@@ -1,127 +1,64 @@
+# PocketBot 🤖📱
 
-[![Version][version-shield]](version-url)
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-<center><img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=200&section=header&text=Discord-Bot&fontSize=80&fontAlignY=35&animation=twinkling&fontColor=gradient" /></center>
+Application Android (**.apk**) pour héberger **gratuitement** ton bot Discord directement sur ton téléphone — dans l'esprit de BotGhost, mais sans serveur : c'est ton téléphone qui garde le bot en ligne.
 
-<br />
+## Fonctionnalités
 
-[![Run on Repl.it](https://repl.it/badge/github/CorwinDev/Discord-Bot)](https://replit.com/@CorwinDeveloper/Discord-Bot-v14?v=1)
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/CorwinDev/Discord-Bot)
+- **Token → bot en ligne** : colle le token de ton bot, appuie sur « Mettre le bot en ligne ».
+- **Tourne en arrière-plan** : service au premier plan + notification permanente, reconnexion automatique, reprise de session Discord, démarrage automatique avec le téléphone (option).
+- **Commandes slash `/`** créées depuis l'app, enregistrées automatiquement sur Discord (réponse publique ou visible seulement par l'utilisateur).
+- **Commandes à préfixe** (`!ping`, `!dis …`).
+- **Variables** dans les réponses : `{user}` `{username}` `{mention}` `{server}` `{channel}` `{args}`.
+- **Statut** (en ligne / inactif / ne pas déranger / invisible) et **activité** (Joue à, Écoute, Regarde, Participe à, statut perso), modifiables en direct.
+- **Message de bienvenue** pour les nouveaux membres.
+- **Console** pour voir l'activité du bot en temps réel.
+- Lien d'**invitation** du bot généré automatiquement.
 
-<!-- PROJECT LOGO -->
-<br />
-<p align="center">
-  <a href="https://github.com/corwindev/Discord-Bot">
-    <img src="https://cdn.discordapp.com/attachments/778665159316209748/1055857473749274694/Corwin-1-modified.png" alt="Pbot-plus" width="200" height="200">
-  </a>
+Le token est stocké uniquement sur le téléphone et n'est envoyé qu'à Discord.
 
-  <h3 align="center">Discord-Bot</h3>
+## Télécharger l'APK
 
-  <p align="center">
-    Discord-bot is an updated version of <a href="https://github.com/DotwoodMedia/Dbot">Dbot</a>, an advanced Discord multipurpose bot containing more than 400 commands.<br> It can do Moderation, Tickets, Radio, Games, Giveaways, Customisation, Economy, Leveling, Invites, Messages, Utilities, Suggestions, Server Stats etc.<br> Unfortunately the owners stopped at the peak and decided to put the source online of which I made an updated version.
-    <br />
-    <br />
-    <a href="https://github.com/corwindev/discord-bot/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/corwindev/discord-bot/issues">Request Feature</a>
-  </p>
-</p>
+L'APK est construit automatiquement par GitHub Actions à chaque push :
 
-<!-- NOTICE -->
+1. Onglet **Actions** du dépôt → dernier run **Build APK**.
+2. En bas, section **Artifacts** → télécharge **PocketBot-apk** (un zip qui contient `PocketBot.apk`).
+3. Sur le téléphone, ouvre l'APK et autorise l'installation depuis des sources inconnues.
 
-### <img src="https://cdn.discordapp.com/emojis/1055803759831294013.png" width="20px" height="20px"> 》Notice 
-> You may not claim this as your own! The original source was created by [Dotwood Media](https://github.com/DotwoodMedia) and [Graphix Development](https://github.com/GraphixDevelopment). The source is modified and updated by me(CorwinDev)
+Pour une vraie release : crée un tag `v1.0.0` → l'APK est attaché à la release GitHub.
 
-> Discord-Bot is a multipurpose Discord bot base in [Discord.js](https://github.com/Discordjs/discordjs)
-If you like this repository, feel free to leave a star ⭐ to motivate me!
+## Créer ton bot Discord
 
-<!-- ABOUT THE PROJECT -->
+1. Va sur <https://discord.com/developers/applications> → **New Application**.
+2. Onglet **Bot** → **Reset Token** → copie le token dans l'app.
+3. Si tu utilises des commandes à **préfixe** : active **MESSAGE CONTENT INTENT**.
+   Si tu utilises le **message de bienvenue** : active **SERVER MEMBERS INTENT**.
+4. Démarre le bot dans l'app, puis appuie sur **Inviter le bot sur un serveur**.
 
-## <img src="https://cdn.discordapp.com/emojis/859424401186095114.png" width="20px" height="20px">》Description 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=corwindev&repo=Discord-bot&theme=tokyonight)](https://github.com/corwindev/Discord-bot)
-## <img src="https://cdn.discordapp.com/emojis/852881450667081728.gif" width="20px" height="20px">》Feature
-- [x] Slash Commands 
-- [x] Upto date with Discord.js v14
-- [x] Automod
-- [x] Custom Commands
-- [x] Music Commands
-- [x] Tickets
-- [x] Utility Commands
-- [x] Suggestions 
-- [x] Reaction Roles
-- [x] Family
-- [x] Giveaways 
-- [x] Easy to use
-- [x] Customizable
-- [x] And much more
-- [x] Don't wanna host it yourself? [Use our public bot](https://discord.com/api/oauth2/authorize?client_id=860390761307439114&permissions=8&scope=bot%20applications.commands)
-## <img src="https://cdn.discordapp.com/emojis/1028680849195020308.png" width="25px" height="25px">》Screenshots
-<br />
-<p align="center">
-  <a href="https://github.com/corwindev/discord-bot">
-    <img src="https://cdn.discordapp.com/attachments/778665159316209748/1055832339328024666/207117434-d98356b1-bf19-418e-9e12-0ef83e0d9a21.png">
-  </a>
-</p>
+## Conseils
 
-## <img src="https://cdn.discordapp.com/emojis/1009754836314628146.gif" width="25px" height="25px">》Requirements
-- NodeJs v17+
-- Java v13 for lavalink server.
-- Discord Token. Get it from [Discord Developers Portal](https://discord.com/developers/applications)
-- Mongo Database URL. Get it from [MongoDB](https://cloud.mongodb.com/v2/635277bf9f5c7b5620db28a4#clusters)
-- Giphy API Token. Get it from [Giphy Developers Portal](https://developers.giphy.com/)
-- OpenAI API Key `for ai chatbot`. Get it from [OpenAi Developers Portal](https://beta.openai.com/account/api-keys)
-- ClientID `for loading slash commands.` [Discord Developers Portal](https://discord.com/developers/applications)
-- Spotify client ID `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
-- Spotify client Secret `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
+- Autorise PocketBot à ignorer l'**optimisation de batterie** (bouton dans l'app), sinon certains téléphones (Xiaomi, Huawei, Samsung…) coupent le bot écran éteint.
+- Le bot est en ligne **tant que le téléphone est allumé et connecté à Internet**.
 
-## <img src="https://cdn.discordapp.com/emojis/814216203466965052.png" width="25px" height="25px">》Installation Guide
+## Compiler soi-même
 
-### <img src="https://cdn.discordapp.com/emojis/1028680849195020308.png" width="15px" height="15px"> Installing via [NPM](https://www.npmjs.com/)
-Clone the repo by running
-```bash
-git clone https://github.com/Corwindev/Discord-Bot.git
-```
-### After cloning Fill all requirement in `.env` **(rename `.env.example` to `.env`)**, then run
+Prérequis : JDK 17+ et le SDK Android (API 35).
 
 ```bash
-npm install
-```
-To start your bot 
-
-```js
-node src/index.js
+./gradlew testReleaseUnitTest   # tests (faux serveur Discord)
+./gradlew assembleRelease       # → app/build/outputs/apk/release/app-release.apk
 ```
 
-## <img src="https://cdn.discordapp.com/emojis/1036083490292244493.png" width="15px" height="15px">》Support Server
-[![DiscordBanner](https://invidget.switchblade.xyz/techpoint-1016942011024158782)](https://discord.gg/techpoint-1016942011024158782)
+## Structure
 
-[Support Server](https://discord.gg/techpoint-1016942011024158782) - Discord-Bot's Support Server Invite
-
-# <img src="https://cdn.discordapp.com/emojis/1015745034076819516.png" width="25px" height="25px">》Faq
-> How to get access to Developers Commands? You will have to set them up via MongoDB or run the below command.
-
-```bash
-npm run add-dev YOUR_Discord_ID
 ```
-# Donate
-
- By Donating, You Will Help Me To Maintain This Project 
-
-<img src="https://cdn.discordapp.com/emojis/809085860632985630.png" width="15px" height="15px"> 》[Sponsor](https://github.com/sponsors/CorwinDev)
-
-[version-shield]: https://img.shields.io/github/package-json/v/CorwinDev/Discord-Bot?style=for-the-badge
-[version-url]: https://github.com/brblacky/WaveMusic
-[contributors-shield]: https://img.shields.io/github/contributors/CorwinDev/Discord-Bot.svg?style=for-the-badge
-[contributors-url]: https://github.com/Corwindev/Discord-Bot/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Corwindev/Discord-Bot.svg?style=for-the-badge
-[forks-url]: https://github.com/Corwindev/Discord-Bot/network/members
-[stars-shield]: https://img.shields.io/github/stars/Corwindev/Discord-Bot.svg?style=for-the-badge
-[stars-url]: https://github.com/Corwindev/Discord-Bot/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Corwindev/Discord-Bot.svg?style=for-the-badge
-[issues-url]: https://github.com/Corwindev/Discord-Bot/issues
-[license-shield]: https://img.shields.io/github/license/Corwindev/Discord-Bot.svg?style=for-the-badge
-[license-url]: https://github.com/Corwindev/Discord-Bot/blob/master/LICENSE
+app/src/main/java/com/pocketbot/app/
+├── MainActivity.kt
+├── bot/
+│   ├── DiscordGateway.kt   # WebSocket Discord : identify, heartbeat, resume, évènements
+│   ├── DiscordRest.kt      # API HTTP : commandes slash, réponses, messages
+│   ├── BotService.kt       # service au premier plan qui garde le bot en ligne
+│   ├── BootReceiver.kt     # démarrage automatique
+│   └── BotRuntime.kt       # état + logs partagés avec l'interface
+├── data/ConfigStore.kt     # token, commandes et réglages (stockage local)
+└── ui/                     # écrans Jetpack Compose (Bot, Commandes, Réglages, Console)
+```
