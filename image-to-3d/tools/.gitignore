@@ -1,0 +1,5 @@
+models/
+build_onnx/
+out/
+__pycache__/
+TripoSR/

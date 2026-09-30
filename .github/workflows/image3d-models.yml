@@ -1,0 +1,69 @@
+# Exporte l'IA TripoSR au format ONNX/ORT et publie les fichiers dans une release GitHub.
+# L'application Image 3D les télécharge depuis cette release (une seule fois).
+name: "Image 3D : modèles d'IA"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "image-to-3d/tools/export_models.py"
+      - ".github/workflows/image3d-models.yml"
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: image3d-models-v1
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Déjà publié ?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -q manifest.json \
+             && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Place disque et mémoire d'échange (l'export manipule plusieurs Go)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo fallocate -l 8G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+          free -h && df -h .
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.skip != 'true'
+        with:
+          python-version: "3.11"
+
+      - name: Dépendances
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r image-to-3d/tools/requirements.txt
+          git clone --depth 1 https://github.com/VAST-AI-Research/TripoSR.git /tmp/TripoSR
+
+      - name: Export
+        if: steps.check.outputs.skip != 'true'
+        run: python image-to-3d/tools/export_models.py --triposr-src /tmp/TripoSR --out models --work /tmp/build_onnx
+
+      - name: Publication
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la models
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --title "Image 3D — fichiers de l'IA" \
+              --notes "Fichiers téléchargés automatiquement par l'application Image 3D (TripoSR, licence MIT ; U²-Net, licence Apache 2.0)." \
+              --target "${{ github.sha }}"
+          fi
+          gh release upload "$RELEASE_TAG" models/* --clobber

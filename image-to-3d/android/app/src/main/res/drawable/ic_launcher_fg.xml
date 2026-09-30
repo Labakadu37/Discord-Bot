@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cube isométrique : trois faces de couleurs différentes -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FF8C7CFF" android:pathData="M54,30 L75,42 L54,54 L33,42 Z" />
+    <path android:fillColor="#FF5B4BDB" android:pathData="M33,42 L54,54 L54,78 L33,66 Z" />
+    <path android:fillColor="#FF3DD6C4" android:pathData="M75,42 L75,66 L54,78 L54,54 Z" />
+</vector>

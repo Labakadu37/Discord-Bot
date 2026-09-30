@@ -1,0 +1,11 @@
+# torch s'installe à part : pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+transformers==4.35.0
+omegaconf
+einops
+onnx==1.23.1
+onnxruntime==1.30.0
+onnxscript
+huggingface_hub
+numpy
+pillow
+scipy

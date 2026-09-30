@@ -1,0 +1,64 @@
+# Compile l'application Android Image 3D et publie l'APK (installable directement sur le téléphone).
+name: "Image 3D : application Android"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "image-to-3d/android/**"
+      - ".github/workflows/image3d-apk.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: image-to-3d/android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Clé de signature (facultative)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.IMAGE3D_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "IMAGE3D_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Tests et compilation
+        env:
+          IMAGE3D_KEYSTORE_PASSWORD: ${{ secrets.IMAGE3D_KEYSTORE_PASSWORD }}
+          IMAGE3D_KEY_ALIAS: ${{ secrets.IMAGE3D_KEY_ALIAS }}
+          IMAGE3D_KEY_PASSWORD: ${{ secrets.IMAGE3D_KEY_PASSWORD }}
+        run: |
+          ./gradlew testDebugUnitTest lintRelease assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk Image3D.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Image3D-apk
+          path: image-to-3d/android/Image3D.apk
+
+      - name: Publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=image3d-app
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Image 3D — application Android" \
+              --notes "Télécharge **Image3D.apk** depuis ton téléphone et installe-le (autorise les « sources inconnues »)." \
+              --target "${{ github.sha }}"
+          fi
+          gh release upload "$TAG" Image3D.apk --clobber
