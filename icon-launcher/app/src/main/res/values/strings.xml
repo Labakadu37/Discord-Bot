@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Mes Icônes</string>
+    <string name="app_name">RedSmile</string>
     <string name="pick_image">🖼 Choisir une image</string>
     <string name="show_logo">Logo</string>
     <string name="mosaic">Mosaïque</string>
-    <string name="reset">Réinitialiser</string>
+    <string name="reset">Image RedSmile</string>
+    <string name="lock">🔒</string>
+    <string name="lock_title_setup">Crée ton mot de passe</string>
+    <string name="lock_title">Mot de passe</string>
+    <string name="password_hint">Mot de passe</string>
+    <string name="confirm_hint">Confirme le mot de passe</string>
+    <string name="unlock">Entrer</string>
+    <string name="wrong_password">Mot de passe incorrect</string>
+    <string name="password_too_short">4 caractères minimum</string>
+    <string name="password_mismatch">Les deux mots de passe sont différents</string>
     <string name="set_home">Écran d\'accueil</string>
-    <string name="hint_no_image">Choisis une image de ta galerie pour changer toutes les icônes.</string>
     <string name="image_error">Impossible de lire cette image.</string>
     <string name="launch_error">Impossible d\'ouvrir cette appli.</string>
 </resources>

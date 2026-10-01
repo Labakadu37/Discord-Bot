@@ -9,7 +9,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -22,16 +25,20 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Écran d'accueil (launcher) qui affiche toutes les applis installées
- * avec des icônes générées à partir d'une image de la galerie.
+ * Écran d'accueil (launcher) protégé par mot de passe qui affiche toutes les applis
+ * installées avec des icônes RedSmile (ou une image choisie dans la galerie).
  */
 class MainActivity : ComponentActivity() {
 
     private val worker = Executors.newSingleThreadExecutor()
     private val prefs by lazy { getSharedPreferences("settings", Context.MODE_PRIVATE) }
     private val imageFile by lazy { File(filesDir, "background.jpg") }
+    private val passwords by lazy { PasswordStore(prefs) }
     private lateinit var adapter: AppAdapter
-    private lateinit var hint: TextView
+    private lateinit var lockScreen: View
+    private lateinit var lockTitle: TextView
+    private lateinit var passwordField: EditText
+    private lateinit var confirmField: EditText
 
     /** Incrémenté à chaque rafraîchissement pour ignorer les résultats périmés. */
     @Volatile private var generation = 0
@@ -44,11 +51,27 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context, intent: Intent) = refresh()
     }
 
+    /** L'écran s'éteint : on reverrouille pour que personne d'autre n'accède aux applis. */
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = lock()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        hint = findViewById(R.id.hint)
+        lockScreen = findViewById(R.id.lockScreen)
+        lockTitle = findViewById(R.id.lockTitle)
+        passwordField = findViewById(R.id.password)
+        confirmField = findViewById(R.id.passwordConfirm)
+        findViewById<Button>(R.id.btnUnlock).setOnClickListener { submitPassword() }
+        val submitOnDone = TextView.OnEditorActionListener { _, action, _ ->
+            (action == EditorInfo.IME_ACTION_DONE).also { if (it) submitPassword() }
+        }
+        passwordField.setOnEditorActionListener(submitOnDone)
+        confirmField.setOnEditorActionListener(submitOnDone)
+        findViewById<Button>(R.id.btnLock).setOnClickListener { lock() }
+
         adapter = AppAdapter(::launch, ::openAppInfo)
         findViewById<RecyclerView>(R.id.grid).apply {
             layoutManager = GridLayoutManager(this@MainActivity, COLUMNS)
@@ -76,15 +99,19 @@ class MainActivity : ComponentActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(packageReceiver, filter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF), RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(packageReceiver, filter)
+            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         }
 
+        lock()
         refresh()
     }
 
     override fun onDestroy() {
         unregisterReceiver(packageReceiver)
+        unregisterReceiver(screenOffReceiver)
         worker.shutdownNow()
         super.onDestroy()
     }
@@ -99,11 +126,40 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun lock() {
+        val setup = !passwords.isSet
+        lockTitle.setText(if (setup) R.string.lock_title_setup else R.string.lock_title)
+        confirmField.visibility = if (setup) View.VISIBLE else View.GONE
+        passwordField.text.clear()
+        confirmField.text.clear()
+        lockScreen.visibility = View.VISIBLE
+    }
+
+    private fun submitPassword() {
+        val password = passwordField.text.toString()
+        if (!passwords.isSet) {
+            when {
+                password.length < 4 -> return toast(R.string.password_too_short)
+                password != confirmField.text.toString() -> return toast(R.string.password_mismatch)
+                else -> passwords.set(password)
+            }
+        } else if (!passwords.check(password)) {
+            passwordField.text.clear()
+            return toast(R.string.wrong_password)
+        }
+        passwordField.text.clear()
+        confirmField.text.clear()
+        getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(passwordField.windowToken, 0)
+        lockScreen.visibility = View.GONE
+    }
+
+    private fun toast(message: Int) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
     private fun importImage(uri: Uri) {
         worker.execute {
             val ok = runCatching { IconStyler.importImage(contentResolver, uri, imageFile) }.getOrDefault(false)
             runOnUiThread {
-                if (ok) refresh() else Toast.makeText(this, R.string.image_error, Toast.LENGTH_SHORT).show()
+                if (ok) refresh() else toast(R.string.image_error)
             }
         }
     }
@@ -122,20 +178,17 @@ class MainActivity : ComponentActivity() {
                 .map { Triple(it.loadLabel(packageManager).toString(), it.activityInfo, it) }
                 .sortedBy { it.first.lowercase() }
 
-            val image = IconStyler.loadImage(imageFile)
+            val image = IconStyler.loadImage(resources, imageFile)
             val entries = activities.mapIndexed { index, (label, info, resolveInfo) ->
                 val icon = resolveInfo.loadIcon(packageManager)
-                val styled = image?.let {
-                    val src = IconStyler.sourceRect(it, index, activities.size, COLUMNS, mosaic)
-                    IconStyler.render(it, src, icon, showLogo, size)
-                }
+                val src = IconStyler.sourceRect(image, index, activities.size, COLUMNS, mosaic)
+                val styled = IconStyler.render(image, src, icon, showLogo, size)
                 AppEntry(label, android.content.ComponentName(info.packageName, info.name), icon, styled)
             }
-            image?.recycle()
+            image.recycle()
 
             runOnUiThread {
                 if (gen != generation || isDestroyed) return@runOnUiThread
-                hint.visibility = if (image == null) View.VISIBLE else View.GONE
                 adapter.submit(entries)
             }
         }
@@ -147,7 +200,7 @@ class MainActivity : ComponentActivity() {
             .setComponent(app.component)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         runCatching { startActivity(intent) }
-            .onFailure { Toast.makeText(this, R.string.launch_error, Toast.LENGTH_SHORT).show() }
+            .onFailure { toast(R.string.launch_error) }
     }
 
     private fun openAppInfo(app: AppEntry) {

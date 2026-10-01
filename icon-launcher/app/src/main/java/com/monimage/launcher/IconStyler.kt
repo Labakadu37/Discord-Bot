@@ -1,6 +1,7 @@
 package com.monimage.launcher
 
 import android.content.ContentResolver
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -37,8 +38,10 @@ object IconStyler {
         return true
     }
 
-    fun loadImage(file: File): Bitmap? =
-        if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
+    /** Image choisie dans la galerie, sinon l'image RedSmile intégrée à l'appli. */
+    fun loadImage(resources: Resources, file: File): Bitmap =
+        (if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null)
+            ?: BitmapFactory.decodeResource(resources, R.drawable.redsmile)
 
     /**
      * Partie de l'image utilisée pour l'icône numéro [index].
@@ -66,7 +69,7 @@ object IconStyler {
         return Rect(l, t, (l + cell).roundToInt().coerceAtMost(w), (t + cell).roundToInt().coerceAtMost(h))
     }
 
-    /** Dessine une icône carrée arrondie : l'image en fond, et éventuellement le logo d'origine au centre. */
+    /** Dessine une icône carrée arrondie : l'image en fond, et éventuellement le logo d'origine dans le coin. */
     fun render(image: Bitmap, src: Rect, appIcon: Drawable, showLogo: Boolean, size: Int): Bitmap {
         val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(out)
@@ -76,13 +79,15 @@ object IconStyler {
         canvas.drawBitmap(image, src, Rect(0, 0, size, size), Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
 
         if (showLogo) {
-            // Pastille blanche pour que le logo reste lisible sur n'importe quelle image
-            val badge = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(215, 255, 255, 255) }
-            canvas.drawCircle(s / 2f, s / 2f, s * 0.31f, badge)
-            val logo = (s * 0.46f).roundToInt()
-            val offset = (size - logo) / 2
+            // Petite pastille en bas à droite : le logo reste reconnaissable sans cacher l'image
+            val radius = s * 0.2f
+            val center = s - radius - s * 0.04f
+            val badge = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(230, 255, 255, 255) }
+            canvas.drawCircle(center, center, radius, badge)
+            val logo = (radius * 1.5f).roundToInt()
+            val left = (center - logo / 2f).roundToInt()
             val oldBounds = appIcon.copyBounds()
-            appIcon.setBounds(offset, offset, offset + logo, offset + logo)
+            appIcon.setBounds(left, left, left + logo, left + logo)
             appIcon.draw(canvas)
             appIcon.bounds = oldBounds
         }

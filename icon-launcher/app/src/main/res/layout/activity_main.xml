@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:fitsSystemWindows="true">
+
+<LinearLayout
+    android:id="@+id/content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <HorizontalScrollView
         android:layout_width="match_parent"
@@ -55,6 +59,14 @@
                 android:textColor="#FFFFFFFF" />
 
             <Button
+                android:id="@+id/btnLock"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/lock"
+                android:textColor="#FFFFFFFF" />
+
+            <Button
                 android:id="@+id/btnHome"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
@@ -65,17 +77,6 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <TextView
-        android:id="@+id/hint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:padding="12dp"
-        android:shadowColor="#CC000000"
-        android:shadowRadius="4"
-        android:text="@string/hint_no_image"
-        android:textColor="#FFFFFFFF" />
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/grid"
         android:layout_width="match_parent"
@@ -85,3 +86,72 @@
         android:paddingHorizontal="8dp"
         android:paddingBottom="16dp" />
 </LinearLayout>
+
+    <!-- Écran de verrouillage : couvre tout tant que le mot de passe n'est pas entré -->
+    <LinearLayout
+        android:id="@+id/lockScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop"
+            android:src="@drawable/redsmile" />
+
+        <TextView
+            android:id="@+id/lockTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:textColor="#FFE53935"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="password"
+            android:backgroundTint="#FFE53935"
+            android:gravity="center"
+            android:hint="@string/password_hint"
+            android:imeOptions="actionDone"
+            android:inputType="textPassword"
+            android:maxWidth="320dp"
+            android:textColor="#FFFFFFFF"
+            android:textColorHint="#88FFFFFF" />
+
+        <EditText
+            android:id="@+id/passwordConfirm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="password"
+            android:backgroundTint="#FFE53935"
+            android:gravity="center"
+            android:hint="@string/confirm_hint"
+            android:imeOptions="actionDone"
+            android:inputType="textPassword"
+            android:textColor="#FFFFFFFF"
+            android:textColorHint="#88FFFFFF"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnUnlock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#FFC62828"
+            android:minWidth="160dp"
+            android:text="@string/unlock"
+            android:textColor="#FFFFFFFF" />
+    </LinearLayout>
+</FrameLayout>
