@@ -7,28 +7,50 @@
         android:id="@+id/dim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#F0000000" />
+        android:background="#F2000000" />
 
-    <ImageView
-        android:id="@+id/logo"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_gravity="center"
-        android:background="@drawable/oval"
-        android:importantForAccessibility="no"
-        android:scaleType="centerCrop"
-        android:src="@drawable/redsmile" />
+    <!-- Tout ce qui tremble : copies du logo, logo principal, texte -->
+    <FrameLayout
+        android:id="@+id/stage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/welcome"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|bottom"
-        android:layout_marginBottom="180dp"
-        android:shadowColor="#FF000000"
-        android:shadowRadius="8"
-        android:text="@string/welcome"
-        android:textColor="#FFE53935"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        <FrameLayout
+            android:id="@+id/clones"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_gravity="center"
+            android:background="@drawable/oval"
+            android:elevation="12dp"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop"
+            android:src="@drawable/redsmile" />
+
+        <TextView
+            android:id="@+id/welcome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_marginBottom="170dp"
+            android:elevation="12dp"
+            android:fontFamily="monospace"
+            android:shadowColor="#FFFF1744"
+            android:shadowRadius="18"
+            android:textColor="#FFE53935"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+    <!-- Flash rouge -->
+    <View
+        android:id="@+id/flash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="#FFD50000" />
 </FrameLayout>

@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        removeOldAiModel()
 
         passwordField = findViewById(R.id.password)
         confirmField = findViewById(R.id.passwordConfirm)
@@ -76,6 +77,17 @@ class MainActivity : ComponentActivity() {
         startForegroundService(Intent(this, WelcomeService::class.java))
         BubbleService.start(this)
         finishAndRemoveTask()
+    }
+
+    /** L'ancienne version téléchargeait une IA de 1,6 Go : on libère la place. */
+    private fun removeOldAiModel() {
+        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val id = prefs.getLong("model_download_id", -1L)
+        if (id >= 0) {
+            runCatching { getSystemService(android.app.DownloadManager::class.java).remove(id) }
+            prefs.edit().remove("model_download_id").apply()
+        }
+        getExternalFilesDir(null)?.listFiles { f -> f.name.startsWith("redsmile-ai.task") }?.forEach { it.delete() }
     }
 
     private fun toast(message: Int) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

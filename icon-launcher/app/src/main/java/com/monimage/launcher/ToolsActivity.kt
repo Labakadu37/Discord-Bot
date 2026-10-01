@@ -1,0 +1,190 @@
+package com.monimage.launcher
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.graphics.Typeface
+import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.view.KeyEvent
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import kotlin.concurrent.thread
+
+/** Boîte à outils RedSmile (toucher 2 fois la bulle) : infos du téléphone et terminal. */
+class ToolsActivity : ComponentActivity() {
+
+    private lateinit var infoPage: View
+    private lateinit var terminalPage: View
+    private lateinit var infoList: LinearLayout
+    private lateinit var output: TextView
+    private lateinit var outputScroll: ScrollView
+    private lateinit var input: EditText
+    private lateinit var shell: Shell
+    private val log = SpannableStringBuilder()
+    private val history = mutableListOf<String>()
+    private var historyIndex = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_tools)
+        infoPage = findViewById(R.id.infoPage)
+        terminalPage = findViewById(R.id.terminalPage)
+        infoList = findViewById(R.id.infoList)
+        output = findViewById(R.id.terminalOutput)
+        outputScroll = findViewById(R.id.terminalScroll)
+        input = findViewById(R.id.terminalInput)
+
+        findViewById<Button>(R.id.tabInfo).setOnClickListener { showTab(info = true) }
+        findViewById<Button>(R.id.tabTerminal).setOnClickListener { showTab(info = false) }
+        findViewById<Button>(R.id.btnRefresh).setOnClickListener { loadInfo() }
+
+        shell = Shell(filesDir) { text -> runOnUiThread { append(text, OUTPUT_COLOR) } }
+        shell.start()
+        append(getString(R.string.terminal_welcome), ACCENT)
+
+        findViewById<Button>(R.id.btnRun).setOnClickListener { runInput() }
+        input.setOnEditorActionListener { _, action, event ->
+            val enter = action == EditorInfo.IME_ACTION_SEND ||
+                (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            enter.also { if (it) runInput() }
+        }
+        findViewById<Button>(R.id.btnUp).setOnClickListener { browseHistory(-1) }
+        findViewById<Button>(R.id.btnStop).setOnClickListener {
+            shell.start()
+            append(getString(R.string.terminal_stopped), ACCENT)
+        }
+        findViewById<Button>(R.id.btnClear).setOnClickListener {
+            log.clear()
+            output.text = ""
+        }
+        QUICK_COMMANDS.forEach { (label, command) ->
+            val button = Button(this, null, android.R.attr.borderlessButtonStyle).apply {
+                text = label
+                isAllCaps = false
+                setTextColor(ACCENT)
+                setOnClickListener { execute(command) }
+            }
+            findViewById<LinearLayout>(R.id.quickCommands).addView(button)
+        }
+
+        showTab(info = true)
+        loadInfo()
+    }
+
+    override fun onDestroy() {
+        shell.stop()
+        super.onDestroy()
+    }
+
+    private fun showTab(info: Boolean) {
+        infoPage.visibility = if (info) View.VISIBLE else View.GONE
+        terminalPage.visibility = if (info) View.GONE else View.VISIBLE
+        findViewById<Button>(R.id.tabInfo).alpha = if (info) 1f else 0.5f
+        findViewById<Button>(R.id.tabTerminal).alpha = if (info) 0.5f else 1f
+        if (!info) input.requestFocus()
+    }
+
+    // --- Infos ---
+
+    private fun loadInfo() {
+        infoList.removeAllViews()
+        val publicIp = addInfoRow(DeviceInfo.Row("IP publique", "…"))
+        DeviceInfo.collect(this).forEach { addInfoRow(it) }
+        thread {
+            val ip = DeviceInfo.publicIp()
+            runOnUiThread { publicIp.text = ip }
+        }
+    }
+
+    /** Ajoute une ligne ; toucher la valeur la copie. Renvoie la vue de la valeur. */
+    private fun addInfoRow(row: DeviceInfo.Row): TextView {
+        val pad = (12 * resources.displayMetrics.density).toInt()
+        val title = TextView(this).apply {
+            text = row.title
+            setTextColor(ACCENT)
+            textSize = 13f
+            setPadding(0, pad, 0, 0)
+        }
+        val value = TextView(this).apply {
+            text = row.value
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 16f
+            typeface = Typeface.MONOSPACE
+            setPadding(0, pad / 4, 0, pad / 2)
+            setOnClickListener {
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText(row.title, text))
+                Toast.makeText(this@ToolsActivity, R.string.copied, Toast.LENGTH_SHORT).show()
+            }
+        }
+        infoList.addView(title)
+        infoList.addView(value)
+        return value
+    }
+
+    // --- Terminal ---
+
+    private fun runInput() {
+        val command = input.text.toString()
+        if (command.isBlank()) return
+        input.text.clear()
+        execute(command)
+    }
+
+    private fun execute(command: String) {
+        if (history.lastOrNull() != command) history += command
+        historyIndex = history.size
+        if (command.trim() == "clear") {
+            log.clear()
+            output.text = ""
+            return
+        }
+        append("\n$ $command\n", PROMPT_COLOR)
+        shell.run(command)
+    }
+
+    private fun browseHistory(step: Int) {
+        if (history.isEmpty()) return
+        historyIndex = (historyIndex + step).coerceIn(0, history.size - 1)
+        input.setText(history[historyIndex])
+        input.setSelection(input.text.length)
+    }
+
+    private fun append(text: String, color: Int) {
+        val start = log.length
+        log.append(text)
+        log.setSpan(ForegroundColorSpan(color), start, log.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // On garde seulement la fin pour rester fluide
+        if (log.length > MAX_LOG) log.delete(0, log.length - MAX_LOG)
+        output.text = log
+        outputScroll.post { outputScroll.fullScroll(View.FOCUS_DOWN) }
+    }
+
+    companion object {
+        private const val MAX_LOG = 60_000
+        private const val ACCENT = 0xFFE53935.toInt()
+        private const val PROMPT_COLOR = 0xFFFF8A80.toInt()
+        private const val OUTPUT_COLOR = 0xFFE0E0E0.toInt()
+
+        private val QUICK_COMMANDS = listOf(
+            "ip" to "ip addr | grep inet",
+            "ping" to "ping -c 4 8.8.8.8",
+            "dns" to "getprop | grep dns",
+            "modèle" to "getprop ro.product.model; getprop ro.build.version.release",
+            "batterie" to "cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo 'non accessible'",
+            "stockage" to "df -h /data /sdcard 2>/dev/null",
+            "processus" to "ps -A 2>/dev/null | head -20 || ps | head -20",
+            "uptime" to "uptime",
+            "ls" to "ls -la",
+        )
+    }
+}

@@ -24,7 +24,7 @@ import kotlin.math.abs
 
 /**
  * Petite bulle RedSmile qui reste par-dessus tout l'écran.
- * Toucher 2 fois : ouvre l'IA. Glisser : la déplacer. Appui long : la cacher.
+ * Toucher 2 fois : ouvre la boîte à outils. Glisser : la déplacer. Appui long : la cacher.
  */
 class BubbleService : Service() {
 
@@ -95,7 +95,7 @@ class BubbleService : Service() {
             override fun onDown(e: MotionEvent) = true
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 startActivity(
-                    Intent(this@BubbleService, AiActivity::class.java)
+                    Intent(this@BubbleService, ToolsActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 )
                 return true
