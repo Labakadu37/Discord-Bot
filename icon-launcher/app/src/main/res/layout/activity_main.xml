@@ -33,6 +33,15 @@
                 android:textAllCaps="false"
                 android:textColor="#FFFFFFFF" />
 
+            <Button
+                android:id="@+id/btnPin"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pin"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFFFF" />
+
             <Switch
                 android:id="@+id/switchLogo"
                 android:layout_width="wrap_content"

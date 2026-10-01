@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
     private val onClick: (AppEntry) -> Unit,
-    private val onLongClick: (AppEntry) -> Unit,
+    private val onLongClick: (AppEntry, View) -> Unit,
 ) : RecyclerView.Adapter<AppAdapter.Holder>() {
 
     private var items: List<AppEntry> = emptyList()
@@ -36,6 +36,6 @@ class AppAdapter(
         holder.label.text = app.label
         holder.itemView.contentDescription = app.label
         holder.itemView.setOnClickListener { onClick(app) }
-        holder.itemView.setOnLongClickListener { onLongClick(app); true }
+        holder.itemView.setOnLongClickListener { onLongClick(app, it); true }
     }
 }

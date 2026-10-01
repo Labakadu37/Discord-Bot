@@ -69,6 +69,36 @@ object IconStyler {
         return Rect(l, t, (l + cell).roundToInt().coerceAtMost(w), (t + cell).roundToInt().coerceAtMost(h))
     }
 
+    /**
+     * Icône « adaptative » pour l'écran d'accueil du téléphone : c'est le launcher (Samsung…)
+     * qui lui donne sa forme. Seule la zone centrale (2/3) est visible, donc on y place l'image
+     * et le logo.
+     */
+    fun renderAdaptive(image: Bitmap, appIcon: Drawable, showLogo: Boolean, size: Int): Bitmap {
+        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val s = size.toFloat()
+        val square = sourceRect(image, 0, 1, 1, mosaic = false)
+        // Fond = couleur du coin de l'image (noir pour RedSmile), puis l'image centrée
+        canvas.drawColor(image.getPixel(square.left, square.top) or Color.BLACK)
+        val inset = (s * 0.14f).roundToInt()
+        canvas.drawBitmap(
+            image, square, Rect(inset, inset, size - inset, size - inset),
+            Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+        )
+        if (showLogo) {
+            val radius = s * 0.095f
+            val center = s * 0.70f
+            val badge = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(235, 255, 255, 255) }
+            canvas.drawCircle(center, center, radius, badge)
+            val logo = (radius * 1.5f).roundToInt()
+            val left = (center - logo / 2f).roundToInt()
+            appIcon.setBounds(left, left, left + logo, left + logo)
+            appIcon.draw(canvas)
+        }
+        return out
+    }
+
     /** Dessine une icône carrée arrondie : l'image en fond, et éventuellement le logo d'origine dans le coin. */
     fun render(image: Bitmap, src: Rect, appIcon: Drawable, showLogo: Boolean, size: Int): Bitmap {
         val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)

@@ -4,6 +4,17 @@
     <string name="pick_image">🖼 Choisir une image</string>
     <string name="show_logo">Logo</string>
     <string name="mosaic">Mosaïque</string>
+    <string name="pin">📌 Écran du téléphone</string>
+    <string name="pin_title">Mettre sur l\'écran d\'accueil du téléphone</string>
+    <string name="pin_selected">Ajouter</string>
+    <string name="pin_all">Toutes</string>
+    <string name="cancel">Annuler</string>
+    <string name="pin_start">Appuie sur « Ajouter » dans chaque fenêtre (%1$d applis)</string>
+    <string name="pin_done">Terminé ! Tu peux enlever les anciennes icônes de l\'écran d\'accueil.</string>
+    <string name="pin_unsupported">Ton écran d\'accueil n\'accepte pas les raccourcis.</string>
+    <string name="pin_need_samsung_home">Choisis d\'abord l\'écran d\'accueil Samsung (One UI Home) comme appli d\'accueil, puis réessaie.</string>
+    <string name="menu_pin">Mettre sur l\'écran d\'accueil</string>
+    <string name="menu_info">Infos de l\'appli</string>
     <string name="reset">Image RedSmile</string>
     <string name="lock">🔒</string>
     <string name="lock_title_setup">Crée ton mot de passe</string>

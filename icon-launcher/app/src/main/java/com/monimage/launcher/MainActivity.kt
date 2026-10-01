@@ -1,5 +1,6 @@
 package com.monimage.launcher
 
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -7,12 +8,15 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.PopupMenu
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -40,6 +44,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var passwordField: EditText
     private lateinit var confirmField: EditText
     private lateinit var loading: LoadingScreen
+    private val shortcuts by lazy { HomeShortcuts(this) }
+    private val handler = Handler(Looper.getMainLooper())
+    private var apps: List<AppEntry> = emptyList()
+
+    /** Applis à poser une par une sur l'écran d'accueil du téléphone. */
+    private val pinQueue = ArrayDeque<AppEntry>()
+    private var pinToken = 0
+    private var pinWaiting = false
+    private var pausedDuringPin = false
 
     /** Incrémenté à chaque rafraîchissement pour ignorer les résultats périmés. */
     @Volatile private var generation = 0
@@ -74,7 +87,7 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.btnLock).setOnClickListener { lock() }
         loading = LoadingScreen(this, findViewById(R.id.loadingScreen)) {}
 
-        adapter = AppAdapter(::launch, ::openAppInfo)
+        adapter = AppAdapter(::launch, ::showAppMenu)
         findViewById<RecyclerView>(R.id.grid).apply {
             layoutManager = GridLayoutManager(this@MainActivity, COLUMNS)
             adapter = this@MainActivity.adapter
@@ -83,6 +96,7 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.btnPick).setOnClickListener {
             pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
+        findViewById<Button>(R.id.btnPin).setOnClickListener { choosePinnedApps() }
         findViewById<Button>(R.id.btnReset).setOnClickListener {
             imageFile.delete()
             refresh()
@@ -125,6 +139,20 @@ class MainActivity : ComponentActivity() {
                 prefs.edit().putBoolean(key, checked).apply()
                 refresh()
             }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (pinWaiting) pausedDuringPin = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // La fenêtre « Ajouter à l'écran d'accueil » vient de se fermer : on passe à l'appli suivante
+        if (pinWaiting && pausedDuringPin) {
+            pinWaiting = false
+            handler.postDelayed({ pinNext() }, 300)
         }
     }
 
@@ -197,10 +225,12 @@ class MainActivity : ComponentActivity() {
                 val styled = IconStyler.render(image, src, icon, showLogo, size)
                 AppEntry(label, android.content.ComponentName(info.packageName, info.name), icon, styled)
             }
+            shortcuts.updatePinned(this, entries, image, showLogo)
             image.recycle()
 
             runOnUiThread {
                 if (gen != generation || isDestroyed) return@runOnUiThread
+                apps = entries
                 adapter.submit(entries)
             }
         }
@@ -213,6 +243,75 @@ class MainActivity : ComponentActivity() {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         runCatching { startActivity(intent) }
             .onFailure { toast(R.string.launch_error) }
+    }
+
+    private fun showAppMenu(app: AppEntry, anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add(R.string.menu_pin).setOnMenuItemClickListener { startPinning(listOf(app)); true }
+            menu.add(R.string.menu_info).setOnMenuItemClickListener { openAppInfo(app); true }
+            show()
+        }
+    }
+
+    private fun choosePinnedApps() {
+        if (apps.isEmpty()) return
+        val checked = BooleanArray(apps.size)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.pin_title)
+            .setMultiChoiceItems(apps.map { it.label }.toTypedArray(), checked) { _, i, on -> checked[i] = on }
+            .setPositiveButton(R.string.pin_selected) { _, _ -> startPinning(apps.filterIndexed { i, _ -> checked[i] }) }
+            .setNeutralButton(R.string.pin_all) { _, _ -> startPinning(apps) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun startPinning(selection: List<AppEntry>) {
+        if (selection.isEmpty()) return
+        // Les raccourcis vont à l'appli d'accueil par défaut : ça doit être celle du téléphone, pas RedSmile
+        val home = packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
+        if (home?.activityInfo?.packageName == packageName) {
+            Toast.makeText(this, R.string.pin_need_samsung_home, Toast.LENGTH_LONG).show()
+            return startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        }
+        if (!shortcuts.isSupported) return toast(R.string.pin_unsupported)
+        pinQueue.clear()
+        pinQueue.addAll(selection)
+        if (selection.size > 1) {
+            Toast.makeText(this, getString(R.string.pin_start, selection.size), Toast.LENGTH_LONG).show()
+        }
+        pinNext()
+    }
+
+    /** Demande au launcher d'ajouter le raccourci suivant de la file. */
+    private fun pinNext() {
+        val app = pinQueue.removeFirstOrNull()
+        if (app == null) {
+            pinWaiting = false
+            return toast(R.string.pin_done)
+        }
+        val token = ++pinToken
+        pinWaiting = true
+        pausedDuringPin = false
+        val showLogo = prefs.getBoolean(KEY_LOGO, true)
+        worker.execute {
+            val image = IconStyler.loadImage(resources, imageFile)
+            val ok = shortcuts.requestPin(this, app, image, showLogo)
+            image.recycle()
+            runOnUiThread {
+                if (!ok) {
+                    pinWaiting = false
+                    pinQueue.clear()
+                    return@runOnUiThread toast(R.string.pin_unsupported)
+                }
+                // Certains launchers ajoutent le raccourci sans ouvrir de fenêtre : on n'attend pas
+                handler.postDelayed({
+                    if (token == pinToken && pinWaiting && !pausedDuringPin) {
+                        pinWaiting = false
+                        pinNext()
+                    }
+                }, 2500)
+            }
+        }
     }
 
     private fun openAppInfo(app: AppEntry) {
