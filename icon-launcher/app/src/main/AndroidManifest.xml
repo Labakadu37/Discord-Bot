@@ -1,41 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Nécessaire depuis Android 11 pour voir la liste des applis installées -->
-    <!-- Pour mettre RedSmile en fond d'écran -->
+    <!-- Fond d'écran RedSmile -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
-
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-    </queries>
+    <!-- Overlay « Bienvenue » affiché par-dessus l'écran d'accueil -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- La musique continue une fois l'appli fermée -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/Theme.MesIcones">
+        android:theme="@style/Theme.RedSmile">
 
         <activity
             android:name=".MainActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:clearTaskOnLaunch="true"
-            android:stateNotNeeded="true"
-            android:resizeableActivity="true"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
+            android:windowSoftInputMode="adjustResize|stateVisible">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Permet de choisir l'appli comme écran d'accueil -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
+
+        <service
+            android:name=".WelcomeService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 </manifest>

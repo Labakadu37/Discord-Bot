@@ -1,56 +1,24 @@
 # RedSmile 🔴
 
-Appli Android perso : on l'ouvre, on entre son **mot de passe**, et **toutes les icônes des applis**
-s'affichent avec l'image RedSmile (déjà intégrée à l'appli, rien à choisir).
+Appli Android perso :
 
-## Comment ça marche
+1. Tu ouvres **RedSmile** et tu tapes ton **mot de passe** (la première fois, tu le crées).
+2. L'appli se ferme et tu retombes sur ton écran d'accueil.
+3. Par-dessus, un overlay **« Bienvenue sur RedSmile »** s'affiche : le smiley rouge tourne en rond
+   pendant que la musique (ZELENUYU Slowed) joue.
+4. Le smiley arrête de tourner et vient se poser **pile à sa place dans le fond d'écran** :
+   RedSmile devient ton fond d'écran (accueil + écran verrouillé), puis l'overlay disparaît.
 
-Android ne permet pas à une appli de modifier les icônes des autres applis.
-La seule façon de le faire, c'est de remplacer l'**écran d'accueil** (le « launcher ») :
-RedSmile affiche toutes tes applis, avec des icônes générées à partir de l'image.
+Touche l'écran pendant l'overlay pour passer directement à la fin.
 
-## Utilisation
+## Première utilisation
 
-1. Installe l'APK sur ton téléphone (autorise « sources inconnues » si demandé).
-2. Ouvre **RedSmile** : la première fois, crée ton mot de passe (4 caractères minimum, à taper deux fois).
-3. Appuie sur **Écran d'accueil** et choisis *RedSmile* comme appli d'accueil par défaut.
-
-Après le mot de passe, un **écran de chargement** s'affiche : le RedSmile tourne en rond pendant
-que la musique (ZELENUYU Slowed) joue, puis tes applis apparaissent (touche l'écran pour passer).
-Le **fond d'écran** (accueil et verrouillage) est aussi remplacé par l'image RedSmile.
-
-Ensuite, à chaque fois que l'écran s'éteint, RedSmile se reverrouille : il faut retaper le mot de passe
-pour voir et ouvrir les applis. Le bouton 🔒 verrouille tout de suite.
-
-### Sur le vrai écran d'accueil Samsung
-
-Android n'autorise aucune appli à changer les icônes de l'écran d'accueil Samsung. Par contre, RedSmile
-peut y **ajouter des raccourcis** avec l'icône RedSmile, et chaque raccourci ouvre la vraie appli :
-
-1. Remets l'écran d'accueil Samsung par défaut (Paramètres → Applis → Applis par défaut → Appli d'accueil → One UI Home).
-2. Ouvre RedSmile → **📌 Écran du téléphone** → coche les applis (ou **Toutes**).
-3. Appuie sur **Ajouter** dans chaque fenêtre Samsung.
-4. Enlève les anciennes icônes de l'écran d'accueil (appui long → Supprimer de l'écran d'accueil ;
-   ça ne désinstalle pas l'appli).
-
-Si tu changes d'image ou l'option Logo, les raccourcis déjà posés se mettent à jour tout seuls.
-Les icônes du tiroir d'applis (la liste complète des applis) restent celles d'origine : ça, Android ne permet pas de le changer.
-
-Options :
-
-| Option | Effet |
-| --- | --- |
-| **Logo** | Ajoute le logo de chaque appli dans le coin de l'icône (sinon toutes les icônes sont identiques). |
-| **Mosaïque** | Chaque appli reçoit un morceau différent de l'image : la grille entière forme l'image. |
-| **🖼 Choisir une image** | Remplace RedSmile par une autre image de la galerie. |
-| **Image RedSmile** | Revient à l'image RedSmile. |
-
-Appui long sur une icône : la mettre sur l'écran d'accueil du téléphone, ou ouvrir ses infos.
+- Android demande l'autorisation **« Afficher par-dessus les autres applis »** : active-la pour RedSmile,
+  reviens dans l'appli et appuie à nouveau sur **Entrer**. C'est à faire une seule fois.
+- Autorise les notifications si tu veux voir « Bienvenue sur RedSmile » dans la barre de notifications
+  pendant la musique (pas obligatoire).
 
 **Mot de passe oublié ?** Paramètres → Applis → RedSmile → Stockage → Effacer les données.
-Au prochain lancement, tu en recrées un nouveau.
-
-Pour revenir à ton ancien écran d'accueil : Paramètres → Applis → Applis par défaut → Appli d'accueil.
 
 ## Compiler
 
@@ -60,5 +28,3 @@ Avec Android Studio, ou en ligne de commande (JDK 17+, SDK Android 34) :
 ./gradlew assembleDebug
 # APK : app/build/outputs/apk/debug/app-debug.apk
 ```
-
-> iPhone : iOS n'autorise aucune appli à changer les icônes des autres, donc ce projet est uniquement pour Android.

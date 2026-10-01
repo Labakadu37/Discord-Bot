@@ -1,216 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
+    android:background="#FF000000"
+    android:fitsSystemWindows="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
 
-<LinearLayout
-    android:id="@+id/content"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    <ImageView
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/redsmile" />
 
-    <HorizontalScrollView
+    <TextView
+        android:id="@+id/lockTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:textColor="#FFE53935"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:background="@drawable/toolbar_bg"
-        android:scrollbars="none">
+        android:autofillHints="password"
+        android:backgroundTint="#FFE53935"
+        android:gravity="center"
+        android:hint="@string/password_hint"
+        android:imeOptions="actionDone"
+        android:inputType="textPassword"
+        android:textColor="#FFFFFFFF"
+        android:textColorHint="#88FFFFFF" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="4dp">
-
-            <Button
-                android:id="@+id/btnPick"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/pick_image"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFFFF" />
-
-            <Button
-                android:id="@+id/btnPin"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/pin"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFFFF" />
-
-            <Switch
-                android:id="@+id/switchLogo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:text="@string/show_logo"
-                android:textColor="#FFFFFFFF" />
-
-            <Switch
-                android:id="@+id/switchMosaic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:text="@string/mosaic"
-                android:textColor="#FFFFFFFF" />
-
-            <Button
-                android:id="@+id/btnReset"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reset"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFFFF" />
-
-            <Button
-                android:id="@+id/btnLock"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/lock"
-                android:textColor="#FFFFFFFF" />
-
-            <Button
-                android:id="@+id/btnHome"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/set_home"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFFFF" />
-        </LinearLayout>
-    </HorizontalScrollView>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/grid"
+    <EditText
+        android:id="@+id/passwordConfirm"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingHorizontal="8dp"
-        android:paddingBottom="16dp" />
+        android:layout_height="wrap_content"
+        android:autofillHints="password"
+        android:backgroundTint="#FFE53935"
+        android:gravity="center"
+        android:hint="@string/confirm_hint"
+        android:imeOptions="actionDone"
+        android:inputType="textPassword"
+        android:textColor="#FFFFFFFF"
+        android:textColorHint="#88FFFFFF"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnUnlock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#FFC62828"
+        android:minWidth="160dp"
+        android:text="@string/unlock"
+        android:textColor="#FFFFFFFF" />
 </LinearLayout>
-
-    <!-- Écran de chargement : le logo tourne pendant la musique -->
-    <LinearLayout
-        android:id="@+id/loadingScreen"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#FF000000"
-        android:clickable="true"
-        android:focusable="true"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp"
-        android:visibility="gone">
-
-        <ImageView
-            android:id="@+id/spinningLogo"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:background="@drawable/oval"
-            android:importantForAccessibility="no"
-            android:scaleType="centerCrop"
-            android:src="@drawable/redsmile" />
-
-        <ProgressBar
-            android:id="@+id/loadingBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="220dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
-            android:max="100"
-            android:progressTint="#FFE53935"
-            android:progressBackgroundTint="#44FFFFFF" />
-
-        <TextView
-            android:id="@+id/loadingText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textColor="#FFE53935"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/tap_to_skip"
-            android:textColor="#66FFFFFF"
-            android:textSize="12sp" />
-    </LinearLayout>
-
-    <!-- Écran de verrouillage : couvre tout tant que le mot de passe n'est pas entré -->
-    <LinearLayout
-        android:id="@+id/lockScreen"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#FF000000"
-        android:clickable="true"
-        android:focusable="true"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp">
-
-        <ImageView
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:importantForAccessibility="no"
-            android:scaleType="centerCrop"
-            android:src="@drawable/redsmile" />
-
-        <TextView
-            android:id="@+id/lockTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:textColor="#FFE53935"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <EditText
-            android:id="@+id/password"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autofillHints="password"
-            android:backgroundTint="#FFE53935"
-            android:gravity="center"
-            android:hint="@string/password_hint"
-            android:imeOptions="actionDone"
-            android:inputType="textPassword"
-            android:maxWidth="320dp"
-            android:textColor="#FFFFFFFF"
-            android:textColorHint="#88FFFFFF" />
-
-        <EditText
-            android:id="@+id/passwordConfirm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autofillHints="password"
-            android:backgroundTint="#FFE53935"
-            android:gravity="center"
-            android:hint="@string/confirm_hint"
-            android:imeOptions="actionDone"
-            android:inputType="textPassword"
-            android:textColor="#FFFFFFFF"
-            android:textColorHint="#88FFFFFF"
-            android:visibility="gone" />
-
-        <Button
-            android:id="@+id/btnUnlock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#FFC62828"
-            android:minWidth="160dp"
-            android:text="@string/unlock"
-            android:textColor="#FFFFFFFF" />
-    </LinearLayout>
-</FrameLayout>

@@ -1,33 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RedSmile</string>
-    <string name="pick_image">🖼 Choisir une image</string>
-    <string name="show_logo">Logo</string>
-    <string name="mosaic">Mosaïque</string>
-    <string name="pin">📌 Écran du téléphone</string>
-    <string name="pin_title">Mettre sur l\'écran d\'accueil du téléphone</string>
-    <string name="pin_selected">Ajouter</string>
-    <string name="pin_all">Toutes</string>
-    <string name="cancel">Annuler</string>
-    <string name="pin_start">Appuie sur « Ajouter » dans chaque fenêtre (%1$d applis)</string>
-    <string name="pin_done">Terminé ! Tu peux enlever les anciennes icônes de l\'écran d\'accueil.</string>
-    <string name="pin_unsupported">Ton écran d\'accueil n\'accepte pas les raccourcis.</string>
-    <string name="pin_need_samsung_home">Choisis d\'abord l\'écran d\'accueil Samsung (One UI Home) comme appli d\'accueil, puis réessaie.</string>
-    <string name="menu_pin">Mettre sur l\'écran d\'accueil</string>
-    <string name="menu_info">Infos de l\'appli</string>
-    <string name="reset">Image RedSmile</string>
-    <string name="lock">🔒</string>
     <string name="lock_title_setup">Crée ton mot de passe</string>
     <string name="lock_title">Mot de passe</string>
     <string name="password_hint">Mot de passe</string>
     <string name="confirm_hint">Confirme le mot de passe</string>
     <string name="unlock">Entrer</string>
-    <string name="loading">Chargement… %1$d %%</string>
-    <string name="tap_to_skip">Touche pour passer</string>
     <string name="wrong_password">Mot de passe incorrect</string>
     <string name="password_too_short">4 caractères minimum</string>
     <string name="password_mismatch">Les deux mots de passe sont différents</string>
-    <string name="set_home">Écran d\'accueil</string>
-    <string name="image_error">Impossible de lire cette image.</string>
-    <string name="launch_error">Impossible d\'ouvrir cette appli.</string>
+    <string name="need_overlay">Active « Afficher par-dessus les autres applis » pour RedSmile, puis reviens et appuie sur Entrer.</string>
+    <string name="welcome">Bienvenue sur RedSmile</string>
+    <string name="channel_name">Bienvenue</string>
+    <string name="notification_text">Bienvenue sur RedSmile 🔴</string>
 </resources>
