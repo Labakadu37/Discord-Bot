@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mes Icônes</string>
+    <string name="pick_image">🖼 Choisir une image</string>
+    <string name="show_logo">Logo</string>
+    <string name="mosaic">Mosaïque</string>
+    <string name="reset">Réinitialiser</string>
+    <string name="set_home">Écran d\'accueil</string>
+    <string name="hint_no_image">Choisis une image de ta galerie pour changer toutes les icônes.</string>
+    <string name="image_error">Impossible de lire cette image.</string>
+    <string name="launch_error">Impossible d\'ouvrir cette appli.</string>
+</resources>
