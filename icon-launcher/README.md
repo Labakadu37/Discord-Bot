@@ -11,6 +11,20 @@ Appli Android perso :
 
 Touche l'écran pendant l'overlay pour passer directement à la fin.
 
+## IA RedSmile (bulle)
+
+Après le mot de passe, une petite **bulle RedSmile** reste sur l'écran, par-dessus toutes les applis,
+même quand RedSmile est fermée (et elle revient après un redémarrage du téléphone).
+
+- **Toucher 2 fois la bulle** : ouvre l'IA RedSmile.
+- **Glisser** : déplacer la bulle.
+- **Appui long** : cacher la bulle (rouvre RedSmile pour la remettre).
+
+L'IA (Qwen 2.5, 1,5 milliard de paramètres) tourne **dans le téléphone**, sans Internet et sans compte.
+À la première ouverture, appuie sur **Télécharger l'IA** (1,6 Go, de préférence en Wi-Fi). C'est une petite IA :
+elle répond en quelques secondes, mais elle est moins forte qu'une IA en ligne et oublie le début des longues
+discussions. **Nouvelle discussion** efface la conversation.
+
 ## Première utilisation
 
 - Android demande l'autorisation **« Afficher par-dessus les autres applis »** : active-la pour RedSmile,

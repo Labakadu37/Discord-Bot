@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
         }
 
         startForegroundService(Intent(this, WelcomeService::class.java))
+        BubbleService.start(this)
         finishAndRemoveTask()
     }
 

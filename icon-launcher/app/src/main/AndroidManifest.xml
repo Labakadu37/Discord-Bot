@@ -9,9 +9,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Bulle IA : reste active et revient après un redémarrage -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Téléchargement du modèle d'IA (une seule fois) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="false"
+        android:largeHeap="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.RedSmile">
@@ -31,5 +37,30 @@
             android:name=".WelcomeService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <activity
+            android:name=".AiActivity"
+            android:exported="false"
+            android:label="@string/ai_title"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.monimage.launcher.ai"
+            android:windowSoftInputMode="adjustResize" />
+
+        <service
+            android:name=".BubbleService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Bulle flottante pour ouvrir l'assistant IA" />
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
