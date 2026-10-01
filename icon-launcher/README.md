@@ -15,6 +15,10 @@ RedSmile affiche toutes tes applis, avec des icônes générées à partir de l'
 2. Ouvre **RedSmile** : la première fois, crée ton mot de passe (4 caractères minimum, à taper deux fois).
 3. Appuie sur **Écran d'accueil** et choisis *RedSmile* comme appli d'accueil par défaut.
 
+Après le mot de passe, un **écran de chargement** s'affiche : le RedSmile tourne en rond pendant
+que la musique (ZELENUYU Slowed) joue, puis tes applis apparaissent (touche l'écran pour passer).
+Le **fond d'écran** (accueil et verrouillage) est aussi remplacé par l'image RedSmile.
+
 Ensuite, à chaque fois que l'écran s'éteint, RedSmile se reverrouille : il faut retaper le mot de passe
 pour voir et ouvrir les applis. Le bouton 🔒 verrouille tout de suite.
 

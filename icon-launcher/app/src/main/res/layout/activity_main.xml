@@ -87,6 +87,56 @@
         android:paddingBottom="16dp" />
 </LinearLayout>
 
+    <!-- Écran de chargement : le logo tourne pendant la musique -->
+    <LinearLayout
+        android:id="@+id/loadingScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/spinningLogo"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:background="@drawable/oval"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop"
+            android:src="@drawable/redsmile" />
+
+        <ProgressBar
+            android:id="@+id/loadingBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:max="100"
+            android:progressTint="#FFE53935"
+            android:progressBackgroundTint="#44FFFFFF" />
+
+        <TextView
+            android:id="@+id/loadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="#FFE53935"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/tap_to_skip"
+            android:textColor="#66FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
     <!-- Écran de verrouillage : couvre tout tant que le mot de passe n'est pas entré -->
     <LinearLayout
         android:id="@+id/lockScreen"

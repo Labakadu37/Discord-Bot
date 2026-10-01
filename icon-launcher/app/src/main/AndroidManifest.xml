@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Nécessaire depuis Android 11 pour voir la liste des applis installées -->
+    <!-- Pour mettre RedSmile en fond d'écran -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

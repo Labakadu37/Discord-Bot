@@ -11,6 +11,8 @@
     <string name="password_hint">Mot de passe</string>
     <string name="confirm_hint">Confirme le mot de passe</string>
     <string name="unlock">Entrer</string>
+    <string name="loading">Chargement… %1$d %%</string>
+    <string name="tap_to_skip">Touche pour passer</string>
     <string name="wrong_password">Mot de passe incorrect</string>
     <string name="password_too_short">4 caractères minimum</string>
     <string name="password_mismatch">Les deux mots de passe sont différents</string>

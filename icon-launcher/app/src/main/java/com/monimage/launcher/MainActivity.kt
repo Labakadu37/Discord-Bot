@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var lockTitle: TextView
     private lateinit var passwordField: EditText
     private lateinit var confirmField: EditText
+    private lateinit var loading: LoadingScreen
 
     /** Incrémenté à chaque rafraîchissement pour ignorer les résultats périmés. */
     @Volatile private var generation = 0
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
         passwordField.setOnEditorActionListener(submitOnDone)
         confirmField.setOnEditorActionListener(submitOnDone)
         findViewById<Button>(R.id.btnLock).setOnClickListener { lock() }
+        loading = LoadingScreen(this, findViewById(R.id.loadingScreen)) {}
 
         adapter = AppAdapter(::launch, ::openAppInfo)
         findViewById<RecyclerView>(R.id.grid).apply {
@@ -105,7 +107,7 @@ class MainActivity : ComponentActivity() {
             registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         }
 
-        lock()
+        if (!unlocked) lock() else lockScreen.visibility = View.GONE
         refresh()
     }
 
@@ -126,7 +128,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        loading.stop()
+    }
+
     private fun lock() {
+        unlocked = false
+        loading.stop()
         val setup = !passwords.isSet
         lockTitle.setText(if (setup) R.string.lock_title_setup else R.string.lock_title)
         confirmField.visibility = if (setup) View.VISIBLE else View.GONE
@@ -151,6 +160,8 @@ class MainActivity : ComponentActivity() {
         confirmField.text.clear()
         getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(passwordField.windowToken, 0)
         lockScreen.visibility = View.GONE
+        unlocked = true
+        loading.start()
     }
 
     private fun toast(message: Int) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
@@ -178,6 +189,7 @@ class MainActivity : ComponentActivity() {
                 .map { Triple(it.loadLabel(packageManager).toString(), it.activityInfo, it) }
                 .sortedBy { it.first.lowercase() }
 
+            Wallpaper.applyIfNeeded(this, imageFile)
             val image = IconStyler.loadImage(resources, imageFile)
             val entries = activities.mapIndexed { index, (label, info, resolveInfo) ->
                 val icon = resolveInfo.loadIcon(packageManager)
@@ -210,6 +222,8 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        /** Reste vrai jusqu'à l'extinction de l'écran, même si Android recrée l'écran. */
+        private var unlocked = false
         private const val COLUMNS = 4
         private const val KEY_LOGO = "show_logo"
         private const val KEY_MOSAIC = "mosaic"
