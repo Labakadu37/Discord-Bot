@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "SMS App",
+    "slug": "sms-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.smsapp"
+    },
+    "android": {
+      "package": "com.example.smsapp",
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "plugins": [
+      "expo-status-bar",
+      "expo-secure-store"
+    ]
+  }
+}
