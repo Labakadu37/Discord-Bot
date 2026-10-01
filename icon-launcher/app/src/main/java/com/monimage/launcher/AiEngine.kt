@@ -2,7 +2,6 @@ package com.monimage.launcher
 
 import android.app.DownloadManager
 import android.content.Context
-import android.net.Uri
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import java.io.File
@@ -19,7 +18,7 @@ object AiEngine {
     private const val MODEL_FILE = "redsmile-ai.task"
     private const val MAX_TOKENS = 1280
     private const val REPLY_RESERVE = 400
-    private const val KEY_DOWNLOAD = "model_download_id"
+    private const val KEY_LEGACY_DOWNLOAD = "model_download_id"
 
     private const val SYSTEM_PROMPT =
         "Tu es l'IA de RedSmile, un assistant personnel. Réponds en français, de façon naturelle et utile."
@@ -37,48 +36,17 @@ object AiEngine {
 
     fun modelFile(context: Context) = File(context.getExternalFilesDir(null), MODEL_FILE)
 
-    fun isModelReady(context: Context): Boolean = modelFile(context).let { it.exists() && downloadId(context) == null }
+    fun isModelReady(context: Context): Boolean = modelFile(context).exists() && !ModelDownloadService.State.running
 
-    // --- Téléchargement du modèle (1,6 Go) avec le gestionnaire de téléchargements d'Android ---
-
-    fun startDownload(context: Context) {
-        val dm = context.getSystemService(DownloadManager::class.java)
+    /** L'ancienne version passait par le gestionnaire de téléchargements d'Android : on l'annule. */
+    fun cancelLegacyDownload(context: Context) {
+        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val id = prefs.getLong(KEY_LEGACY_DOWNLOAD, -1L)
+        if (id < 0) return
+        runCatching { context.getSystemService(DownloadManager::class.java).remove(id) }
         modelFile(context).delete()
-        val request = DownloadManager.Request(Uri.parse(MODEL_URL))
-            .setTitle("RedSmile IA")
-            .setDescription("Téléchargement du modèle (1,6 Go)")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(context, null, MODEL_FILE)
-        prefs(context).edit().putLong(KEY_DOWNLOAD, dm.enqueue(request)).apply()
+        prefs.edit().remove(KEY_LEGACY_DOWNLOAD).apply()
     }
-
-    /** Progression 0..100, ou -1 si le téléchargement a échoué. Null s'il n'y a pas de téléchargement. */
-    fun downloadProgress(context: Context): Int? {
-        val id = downloadId(context) ?: return null
-        val dm = context.getSystemService(DownloadManager::class.java)
-        dm.query(DownloadManager.Query().setFilterById(id)).use { c ->
-            if (!c.moveToFirst()) return clearDownload(context, failed = true)
-            val status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            val done = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-            val total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-            return when (status) {
-                DownloadManager.STATUS_SUCCESSFUL -> clearDownload(context, failed = false)
-                DownloadManager.STATUS_FAILED -> clearDownload(context, failed = true)
-                else -> if (total > 0) (done * 100 / total).toInt() else 0
-            }
-        }
-    }
-
-    private fun clearDownload(context: Context, failed: Boolean): Int? {
-        prefs(context).edit().remove(KEY_DOWNLOAD).apply()
-        if (failed) modelFile(context).delete()
-        return if (failed) -1 else null
-    }
-
-    private fun downloadId(context: Context): Long? =
-        prefs(context).getLong(KEY_DOWNLOAD, -1L).takeIf { it >= 0 }
-
-    private fun prefs(context: Context) = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     // --- Discussion ---
 

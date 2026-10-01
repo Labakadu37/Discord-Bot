@@ -38,9 +38,10 @@ class AiActivity : ComponentActivity() {
         input = findViewById(R.id.aiInput)
         send = findViewById(R.id.btnSend)
 
+        AiEngine.cancelLegacyDownload(this)
         downloadButton.setOnClickListener {
-            AiEngine.startDownload(this)
-            refreshState()
+            ModelDownloadService.start(this)
+            handler.postDelayed({ refreshState() }, 300)
         }
         send.setOnClickListener { sendMessage() }
         input.setOnEditorActionListener { _, action, _ ->
@@ -64,17 +65,20 @@ class AiActivity : ComponentActivity() {
     /** Affiche l'état : à télécharger, en téléchargement, en chargement ou prêt. */
     private fun refreshState() {
         handler.removeCallbacksAndMessages(null)
-        val download = AiEngine.downloadProgress(this)
+        val download = ModelDownloadService.State
         when {
-            download != null && download >= 0 -> {
-                showStatus(getString(R.string.ai_downloading, download), showProgress = true, canDownload = false)
-                progress.isIndeterminate = false
-                progress.progress = download
-                handler.postDelayed({ refreshState() }, 1000)
+            download.running -> {
+                val text = getString(R.string.ai_downloading, ModelDownloadService.progressText(this)) +
+                    (download.error?.let { "\n" + getString(R.string.ai_download_retrying, it) } ?: "")
+                showStatus(text, showProgress = true, canDownload = false)
+                progress.isIndeterminate = download.total <= 0
+                progress.progress = ModelDownloadService.percent()
+                handler.postDelayed({ refreshState() }, 500)
             }
             !AiEngine.isModelReady(this) -> {
-                val msg = if (download == -1) R.string.ai_download_failed else R.string.ai_need_download
-                showStatus(getString(msg), showProgress = false, canDownload = true)
+                val text = download.error?.let { getString(R.string.ai_download_failed, it) }
+                    ?: getString(R.string.ai_need_download)
+                showStatus(text, showProgress = false, canDownload = true)
             }
             else -> {
                 showStatus(getString(R.string.ai_loading), showProgress = true, canDownload = false)
