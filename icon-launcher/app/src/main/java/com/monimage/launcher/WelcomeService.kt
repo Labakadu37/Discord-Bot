@@ -3,7 +3,6 @@ package com.monimage.launcher
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.app.WallpaperManager
 import android.content.Intent
@@ -11,8 +10,6 @@ import android.content.pm.ServiceInfo
 import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.PixelFormat
-import android.graphics.drawable.Icon
-import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
@@ -22,17 +19,14 @@ import kotlin.concurrent.thread
 import kotlin.math.max
 
 /**
- * Accueil RedSmile par-dessus l'écran d'accueil : la musique joue jusqu'au bout et
- * l'animation (voir [WelcomeStage]) suit ses beats, puis le smiley se pose dans le fond d'écran.
- * Toucher l'écran fait poser le smiley tout de suite ; la musique continue (bouton « Arrêter » dans la notification).
+ * Accueil RedSmile par-dessus l'écran d'accueil : l'animation (voir [WelcomeStage]) joue
+ * sans musique, puis le smiley se pose dans le fond d'écran.
  */
 class WelcomeService : Service() {
 
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
     private var overlay: View? = null
-    private var player: MediaPlayer? = null
-    private var lastPos = 0
-    private var lastSync = 0L
+    private var startTime = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -42,36 +36,20 @@ class WelcomeService : Service() {
             return START_NOT_STICKY
         }
         startInForeground()
-        if (player != null) return START_NOT_STICKY // déjà en cours
+        if (overlay != null) return START_NOT_STICKY
 
         thread { setWallpaper() }
-        val mp = MediaPlayer.create(this, R.raw.zelenuyu) ?: run { stopSelf(); return START_NOT_STICKY }
-        player = mp
-        mp.setOnCompletionListener { if (overlay == null) stopSelf() }
+        startTime = SystemClock.uptimeMillis()
         showOverlay()
-        mp.start()
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        player?.release()
-        player = null
         removeOverlay()
         super.onDestroy()
     }
 
-    /** Position de la musique, lissée entre deux mises à jour du lecteur pour une animation fluide. */
-    private fun musicTime(): Int {
-        val mp = player ?: return Int.MAX_VALUE
-        val now = SystemClock.uptimeMillis()
-        val pos = runCatching { mp.currentPosition }.getOrDefault(lastPos)
-        if (pos != lastPos || lastSync == 0L) {
-            lastPos = pos
-            lastSync = now
-        }
-        val playing = runCatching { mp.isPlaying }.getOrDefault(false)
-        return if (playing) lastPos + (now - lastSync).coerceAtMost(120).toInt() else lastPos
-    }
+    private fun musicTime(): Int = (SystemClock.uptimeMillis() - startTime).toInt()
 
     private fun showOverlay() {
         val timeline = MusicTimeline.load(resources, R.raw.zelenuyu_beats)
@@ -80,8 +58,7 @@ class WelcomeService : Service() {
             onSkip = {},
             onFinished = {
                 removeOverlay()
-                // La musique continue jusqu'au bout si elle n'est pas finie
-                if (player?.isPlaying != true) stopSelf()
+                stopSelf()
             },
         )
         val params = WindowManager.LayoutParams(
@@ -106,7 +83,6 @@ class WelcomeService : Service() {
         overlay = null
     }
 
-    /** Où tombe le smiley dans le fond d'écran (recadré au centre de l'écran). */
     private fun wallpaperTarget(): WelcomeStage.Target {
         val screen = screenSize()
         val scale = max(screen.x / WALL_W, screen.y / WALL_H)
@@ -122,20 +98,10 @@ class WelcomeService : Service() {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel_name), NotificationManager.IMPORTANCE_LOW)
         )
-        val stop = PendingIntent.getService(
-            this, 0, Intent(this, WelcomeService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_text))
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                    getString(R.string.stop_music), stop,
-                ).build()
-            )
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -144,7 +110,6 @@ class WelcomeService : Service() {
         }
     }
 
-    /** RedSmile en fond d'écran d'accueil et de verrouillage, à chaque lancement. */
     private fun setWallpaper() {
         val bitmap = BitmapFactory.decodeResource(resources, R.drawable.redsmile_wallpaper) ?: return
         runCatching {
@@ -169,7 +134,6 @@ class WelcomeService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val ACTION_STOP = "com.monimage.launcher.STOP_MUSIC"
 
-        // Position du smiley dans redsmile_wallpaper.jpg (même recadrage que redsmile.jpg)
         private const val WALL_W = 1476f
         private const val WALL_H = 2624f
         private const val SMILE_X = 735f

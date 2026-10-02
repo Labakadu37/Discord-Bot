@@ -13,8 +13,8 @@ android {
         // Android 14 : indispensable pour que la bulle, le Bienvenue et la détection s'affichent
         // correctement. (Le terminal Linux aurait besoin de targetSdk 28, mais ça casse le reste.)
         targetSdk = 34
-        versionCode = 4
-        versionName = "2.2"
+        versionCode = 5
+        versionName = "2.3"
 
         // Détection ML Kit uniquement pour les téléphones récents (64 bits) : APK bien plus léger
         ndk { abiFilters += "arm64-v8a" }
