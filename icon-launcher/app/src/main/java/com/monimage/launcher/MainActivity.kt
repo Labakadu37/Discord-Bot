@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         removeOldAiModel()
+        showLastCrash()
 
         passwordField = findViewById(R.id.password)
         confirmField = findViewById(R.id.passwordConfirm)
@@ -84,10 +85,39 @@ class MainActivity : ComponentActivity() {
             }
             return
         }
-        startForegroundService(Intent(this, WelcomeService::class.java))
-        BubbleService.start(this)
+        // Si le démarrage d'un service échoue, on l'affiche au lieu de fermer l'appli sans rien dire
+        val error = runCatching {
+            startForegroundService(Intent(this, WelcomeService::class.java))
+            BubbleService.start(this)
+        }.exceptionOrNull()
+        if (error != null) {
+            showMessage("Erreur au démarrage", error.stackTraceToString())
+            return
+        }
         askToStayActive()
         finishAndRemoveTask()
+    }
+
+    /** Affiche le dernier plantage enregistré (service compris), pour pouvoir le corriger. */
+    private fun showLastCrash() {
+        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val crash = prefs.getString(RedSmileApp.KEY_CRASH, null) ?: return
+        prefs.edit().remove(RedSmileApp.KEY_CRASH).apply()
+        showMessage("RedSmile a planté", crash)
+    }
+
+    private fun showMessage(title: String, body: String) {
+        val text = TextView(this).apply {
+            setText(body)
+            setTextIsSelectable(true)
+            setPadding(48, 32, 48, 32)
+            textSize = 12f
+        }
+        android.app.AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(android.widget.ScrollView(this).apply { addView(text) })
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     override fun onResume() {
