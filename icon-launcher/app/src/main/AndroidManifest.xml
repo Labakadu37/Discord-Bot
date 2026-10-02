@@ -12,6 +12,8 @@
     <!-- Bulle IA : reste active et revient après un redémarrage -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Rester actif pour dire bonjour à chaque déverrouillage -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Boîte à outils : IP publique, état du réseau -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -52,7 +54,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Bulle flottante pour ouvrir la boîte à outils" />
+                android:value="Bulle flottante et message d'accueil au déverrouillage" />
         </service>
 
         <receiver

@@ -5,12 +5,17 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.Gravity
@@ -20,18 +25,50 @@ import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.Toast
+import java.util.Calendar
 import kotlin.math.abs
 
 /**
- * Petite bulle RedSmile qui reste par-dessus tout l'écran.
- * Toucher 2 fois : ouvre la boîte à outils. Glisser : la déplacer. Appui long : la cacher.
+ * Service RedSmile toujours actif (relancé au démarrage du téléphone) :
+ * - la bulle par-dessus l'écran (toucher 2 fois : boîte à outils, glisser : déplacer, appui long : cacher) ;
+ * - le message d'accueil à chaque déverrouillage (« Bonjour ! Comment s'est passée ta nuit ? »…).
  */
 class BubbleService : Service() {
 
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
+    private val prefs by lazy { getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    private val handler = Handler(Looper.getMainLooper())
     private var bubble: View? = null
+    private var greeter: GreetingOverlay? = null
+
+    /** Écran éteint : on note l'heure. Téléphone déverrouillé : on dit bonjour si besoin. */
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    greeter?.dismiss(animated = false)
+                    prefs.edit().putLong(KEY_SCREEN_OFF, System.currentTimeMillis()).apply()
+                }
+                Intent.ACTION_USER_PRESENT -> greetIfNeeded(force = false)
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        greeter = GreetingOverlay(this)
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenReceiver, filter)
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startInForeground()
@@ -39,14 +76,42 @@ class BubbleService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        if (bubble == null) showBubble()
+        when (intent?.action) {
+            // Le téléphone vient de redémarrer : on salue (laisser l'écran d'accueil s'afficher d'abord)
+            ACTION_BOOT -> handler.postDelayed({ greetIfNeeded(force = true) }, 2500)
+            ACTION_TEST_GREETING -> greetIfNeeded(force = true)
+        }
+        if (bubble == null && !prefs.getBoolean(KEY_BUBBLE_HIDDEN, false)) showBubble()
         return START_STICKY
     }
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        unregisterReceiver(screenReceiver)
+        greeter?.release()
+        greeter = null
+        removeBubble()
+        super.onDestroy()
+    }
+
+    private fun removeBubble() {
         bubble?.let { runCatching { windowManager.removeView(it) } }
         bubble = null
-        super.onDestroy()
+    }
+
+    private fun greetIfNeeded(force: Boolean) {
+        val now = Calendar.getInstance()
+        val lastSlot = prefs.getString(KEY_LAST_SLOT, null)
+        val screenOff = prefs.getLong(KEY_SCREEN_OFF, 0L)
+        val away = if (screenOff > 0) System.currentTimeMillis() - screenOff else null
+        if (!force && !Greetings.shouldGreet(now, lastSlot, away)) return
+
+        val slotKey = Greetings.slotKey(now)
+        val battery = getSystemService(BatteryManager::class.java)
+            .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).takeIf { it in 0..100 }
+        val message = Greetings.message(now, firstOfSlot = slotKey != lastSlot, batteryPercent = battery)
+        prefs.edit().putString(KEY_LAST_SLOT, slotKey).apply()
+        greeter?.show(message, speak = prefs.getBoolean(KEY_VOICE, true))
     }
 
     private fun startInForeground() {
@@ -57,7 +122,7 @@ class BubbleService : Service() {
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.bubble_notification))
+            .setContentText(getString(R.string.service_notification))
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -101,8 +166,10 @@ class BubbleService : Service() {
                 return true
             }
             override fun onLongPress(e: MotionEvent) {
+                // On cache seulement la bulle : les messages d'accueil continuent
                 Toast.makeText(this@BubbleService, R.string.bubble_hidden, Toast.LENGTH_LONG).show()
-                stopSelf()
+                prefs.edit().putBoolean(KEY_BUBBLE_HIDDEN, true).apply()
+                removeBubble()
             }
         })
 
@@ -152,10 +219,27 @@ class BubbleService : Service() {
         private const val NOTIFICATION_ID = 2
         private const val KEY_X = "bubble_x"
         private const val KEY_Y = "bubble_y"
+        private const val KEY_BUBBLE_HIDDEN = "bubble_hidden"
+        private const val KEY_SCREEN_OFF = "last_screen_off"
+        private const val KEY_LAST_SLOT = "last_greeting_slot"
+        const val KEY_VOICE = "greeting_voice"
+        private const val ACTION_BOOT = "com.monimage.launcher.BOOT"
+        private const val ACTION_TEST_GREETING = "com.monimage.launcher.TEST_GREETING"
 
+        /** Lancé depuis RedSmile : la bulle réapparaît si elle avait été cachée. */
         fun start(context: Context) {
+            context.getSharedPreferences("settings", Context.MODE_PRIVATE).edit()
+                .putBoolean(KEY_BUBBLE_HIDDEN, false).apply()
+            send(context, null)
+        }
+
+        fun startAfterBoot(context: Context) = send(context, ACTION_BOOT)
+
+        fun testGreeting(context: Context) = send(context, ACTION_TEST_GREETING)
+
+        private fun send(context: Context, action: String?) {
             if (Settings.canDrawOverlays(context)) {
-                context.startForegroundService(Intent(context, BubbleService::class.java))
+                context.startForegroundService(Intent(context, BubbleService::class.java).setAction(action))
             }
         }
     }

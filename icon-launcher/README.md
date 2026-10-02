@@ -13,13 +13,39 @@ Appli Android perso :
 
 Touche l'écran pendant l'animation pour passer directement à la fin.
 
+## Message d'accueil
+
+À chaque déverrouillage du téléphone, une carte RedSmile descend du haut de l'écran et te parle
+(et le dit à voix haute, sauf en silencieux / vibreur) :
+
+| Moment | Exemple |
+| --- | --- |
+| Matin (5 h – 11 h) | « Bonjour ! Comment s'est passée ta nuit ? » |
+| Midi (11 h – 14 h) | « Salut ! C'est l'heure de manger, bon appétit ! » |
+| Après-midi en semaine (14 h – 18 h) | « Te revoilà ! Comment s'est passée ta journée à l'école ? » |
+| Après-midi le week-end | « Bon après-midi ! Tu profites bien du week-end ? » |
+| Soir (18 h – 22 h) | « Bonsoir ! Comment s'est passée ta journée ? » |
+| Nuit | « Il est tard... Pense à dormir un peu. » |
+
+Comme une vraie personne, RedSmile ne redit pas bonjour si tu as juste regardé l'heure : elle salue au
+premier déverrouillage de chaque moment de la journée, ou si le téléphone est resté verrouillé
+au moins 30 minutes (« Re ! »). Si la batterie est à 20 % ou moins, elle te le rappelle.
+Elle salue aussi juste après un redémarrage du téléphone.
+
+Dans la boîte à outils (onglet Infos) : **👋 Tester le message** et **🔊 Voix** (activer / couper la voix).
+
+> ⚠️ **Forcer l'arrêt** bloque complètement l'appli : Android ne la relance plus, même au redémarrage,
+> tant que tu ne la rouvres pas toi-même. C'est une règle d'Android, aucune appli ne peut la contourner.
+> Pour que RedSmile ne soit pas endormie par l'économie de batterie, accepte la demande
+> « Ignorer l'optimisation de la batterie » (ou Paramètres → Batterie → Applis jamais en veille → RedSmile).
+
 ## Boîte à outils (bulle)
 
 Après le mot de passe, une petite **bulle RedSmile** reste sur l'écran, par-dessus toutes les applis,
 même quand RedSmile est fermée (et elle revient après un redémarrage du téléphone).
 
 - **Toucher 2 fois la bulle** : ouvre la boîte à outils.
-- **Glisser** : déplacer la bulle. **Appui long** : la cacher (rouvre RedSmile pour la remettre).
+- **Glisser** : déplacer la bulle. **Appui long** : la cacher (les messages d'accueil continuent ; rouvre RedSmile pour la remettre).
 
 **Infos** : IP publique, IP locales (Wi-Fi / mobile, IPv4 et IPv6), type de réseau et VPN, modèle,
 version d'Android, processeur, batterie (%, température, tension), mémoire vive, stockage, écran,

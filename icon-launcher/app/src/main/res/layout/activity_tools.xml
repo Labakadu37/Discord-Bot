@@ -70,15 +70,38 @@
                 android:orientation="vertical" />
         </ScrollView>
 
-        <Button
-            android:id="@+id/btnRefresh"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="8dp"
-            android:backgroundTint="#FFC62828"
-            android:text="@string/refresh"
-            android:textColor="#FFFFFFFF" />
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <Button
+                android:id="@+id/btnGreetingTest"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/greeting_test"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFFFF" />
+
+            <Button
+                android:id="@+id/btnVoice"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFFFF" />
+
+            <Button
+                android:id="@+id/btnRefresh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#FFC62828"
+                android:text="@string/refresh"
+                android:textColor="#FFFFFFFF" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Onglet Terminal -->

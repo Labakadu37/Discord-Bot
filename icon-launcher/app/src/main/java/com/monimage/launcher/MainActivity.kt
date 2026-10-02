@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
         startForegroundService(Intent(this, WelcomeService::class.java))
         BubbleService.start(this)
+        askToStayActive()
         finishAndRemoveTask()
     }
 
@@ -88,6 +89,19 @@ class MainActivity : ComponentActivity() {
             prefs.edit().remove("model_download_id").apply()
         }
         getExternalFilesDir(null)?.listFiles { f -> f.name.startsWith("redsmile-ai.task") }?.forEach { it.delete() }
+    }
+
+    /** Sans ça, l'économie de batterie de Samsung peut endormir RedSmile et elle ne dit plus bonjour. */
+    @android.annotation.SuppressLint("BatteryLife")
+    private fun askToStayActive() {
+        val power = getSystemService(android.os.PowerManager::class.java)
+        if (power.isIgnoringBatteryOptimizations(packageName)) return
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
     }
 
     private fun toast(message: Int) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

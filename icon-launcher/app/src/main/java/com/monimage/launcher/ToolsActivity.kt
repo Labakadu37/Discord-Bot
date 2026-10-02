@@ -46,6 +46,19 @@ class ToolsActivity : ComponentActivity() {
         findViewById<Button>(R.id.tabInfo).setOnClickListener { showTab(info = true) }
         findViewById<Button>(R.id.tabTerminal).setOnClickListener { showTab(info = false) }
         findViewById<Button>(R.id.btnRefresh).setOnClickListener { loadInfo() }
+        findViewById<Button>(R.id.btnGreetingTest).setOnClickListener { BubbleService.testGreeting(this) }
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val voice = findViewById<Button>(R.id.btnVoice)
+        val showVoice = {
+            voice.setText(
+                if (prefs.getBoolean(BubbleService.KEY_VOICE, true)) R.string.greeting_voice_on else R.string.greeting_voice_off
+            )
+        }
+        showVoice()
+        voice.setOnClickListener {
+            prefs.edit().putBoolean(BubbleService.KEY_VOICE, !prefs.getBoolean(BubbleService.KEY_VOICE, true)).apply()
+            showVoice()
+        }
 
         shell = Shell(filesDir) { text -> runOnUiThread { append(text, OUTPUT_COLOR) } }
         shell.start()

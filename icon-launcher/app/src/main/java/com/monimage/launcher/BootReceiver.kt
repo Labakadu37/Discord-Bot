@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
-/** Remet la bulle IA après un redémarrage du téléphone. */
+/** Après un redémarrage : remet la bulle et dit bonjour. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) BubbleService.start(context)
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) BubbleService.startAfterBoot(context)
     }
 }
