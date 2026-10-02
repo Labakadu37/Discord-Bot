@@ -71,8 +71,10 @@ class BubbleService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startInForeground()
+        // Si le système refuse le service en avant-plan, on affiche quand même la bulle (écran allumé)
+        runCatching { startInForeground() }
         if (!Settings.canDrawOverlays(this)) {
+            toast(getString(R.string.need_overlay))
             stopSelf()
             return START_NOT_STICKY
         }
@@ -83,6 +85,10 @@ class BubbleService : Service() {
         }
         if (bubble == null && !prefs.getBoolean(KEY_BUBBLE_HIDDEN, false)) showBubble()
         return START_STICKY
+    }
+
+    private fun toast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
     override fun onDestroy() {
@@ -210,8 +216,9 @@ class BubbleService : Service() {
             }
         }
 
-        runCatching { windowManager.addView(view, params) }.onFailure { stopSelf(); return }
-        bubble = view
+        runCatching { windowManager.addView(view, params) }
+            .onSuccess { bubble = view; toast(getString(R.string.bubble_shown)) }
+            .onFailure { toast(getString(R.string.bubble_error, it.message ?: it.javaClass.simpleName)); stopSelf() }
     }
 
     companion object {

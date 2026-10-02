@@ -92,8 +92,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Retour depuis l'écran « Afficher par-dessus les autres applis » : on continue si c'est activé
-        if (passwordOk && Settings.canDrawOverlays(this)) proceed()
+        if (passwordOk && Settings.canDrawOverlays(this)) {
+            // Retour depuis l'écran d'autorisation : on continue
+            proceed()
+        } else if (passwords.isSet && Settings.canDrawOverlays(this)) {
+            // L'appli est simplement rouverte et l'autorisation est là : on remet la bulle tout de suite
+            BubbleService.start(this)
+        }
     }
 
     /** L'ancienne version téléchargeait une IA de 1,6 Go : on libère la place. */

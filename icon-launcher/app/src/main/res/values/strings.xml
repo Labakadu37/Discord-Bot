@@ -19,6 +19,8 @@
     <string name="bubble_description">Bulle RedSmile : toucher 2 fois pour ouvrir la boîte à outils</string>
     <string name="bubble_hidden">Bulle cachée (les messages d\'accueil continuent). Rouvre RedSmile pour la remettre.</string>
     <string name="service_notification">RedSmile veille sur toi · touche 2 fois la bulle pour les outils</string>
+    <string name="bubble_shown">RedSmile activé 🔴 La bulle est là, touche-la 2 fois.</string>
+    <string name="bubble_error">RedSmile n\'a pas pu afficher la bulle : %1$s</string>
     <string name="greeting_test">👋 Tester le message</string>
     <string name="greeting_voice_on">🔊 Voix : activée</string>
     <string name="greeting_voice_off">🔇 Voix : coupée</string>
