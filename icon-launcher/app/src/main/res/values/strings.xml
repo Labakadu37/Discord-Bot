@@ -13,6 +13,7 @@
     <string name="welcome">Bienvenue sur RedSmile</string>
     <string name="channel_name">Bienvenue</string>
     <string name="notification_text">Bienvenue sur RedSmile 🔴</string>
+    <string name="stop_music">Arrêter la musique</string>
     <string name="bubble_channel">Bulle RedSmile</string>
     <string name="bubble_notification">Touche 2 fois la bulle pour ouvrir la boîte à outils</string>
     <string name="bubble_description">Bulle RedSmile : toucher 2 fois pour ouvrir la boîte à outils</string>

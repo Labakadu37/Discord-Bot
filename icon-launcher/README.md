@@ -4,14 +4,20 @@ Appli Android perso :
 
 1. Tu ouvres **RedSmile** et tu tapes ton **mot de passe** (la première fois, tu le crées).
 2. L'appli se ferme et tu retombes sur ton écran d'accueil.
-3. Par-dessus, l'animation de bienvenue démarre avec la musique (ZELENUYU Slowed) :
-   le smiley surgit en tournant, flash rouge et écran qui tremble, puis il se démultiplie en une
-   nuée de smileys qui volent partout pendant que le grand bat comme un cœur ;
-   « Bienvenue sur RedSmile » s'écrit lettre par lettre avec un effet glitch.
-4. Tous les smileys foncent au centre (2e flash), puis le smiley vient se poser **pile à sa place
-   dans le fond d'écran** : RedSmile devient ton fond d'écran (accueil + écran verrouillé).
+3. Par-dessus, l'animation de bienvenue démarre et dure **toute la musique** (ZELENUYU Slowed, 1 min 49).
+   Elle suit le morceau grâce à une carte rythmique calculée à partir de la chanson
+   (`res/raw/zelenuyu_beats.json` : 103 BPM, 190 beats, drops et breaks) :
+   - **intro** : le smiley grandit dans le noir, « Bienvenue sur RedSmile » s'écrit lettre par lettre ;
+   - **drops** : à chaque beat le smiley cogne et une onde rouge part ; les beats forts font flasher
+     l'écran, le faire trembler, glitcher le texte et gicler des gouttes rouges ; 26 copies du smiley
+     volent partout et rebondissent sur les bords ;
+   - **breaks** (quand la basse coupe) : les copies se rangent en cercle et tournent doucement autour du smiley ;
+   - **retour du drop** : flash, tremblement, les copies explosent depuis le cercle ;
+   - **fin** : tout converge et le smiley se pose **pile à sa place dans le fond d'écran**
+     (RedSmile devient ton fond d'écran, accueil + écran verrouillé).
 
-Touche l'écran pendant l'animation pour passer directement à la fin.
+Touche l'écran pour faire poser le smiley tout de suite : la musique continue jusqu'au bout
+(bouton **Arrêter la musique** dans la notification).
 
 ## Message d'accueil
 
