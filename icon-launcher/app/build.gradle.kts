@@ -10,11 +10,11 @@ android {
     defaultConfig {
         applicationId = "com.monimage.launcher"
         minSdk = 26
-        // Comme Termux : depuis Android 10, une appli qui vise une version plus récente n'a plus le droit
-        // de lancer les programmes qu'elle télécharge (ici proot + Alpine Linux du terminal Linux)
-        targetSdk = 28
-        versionCode = 3
-        versionName = "2.1"
+        // Android 14 : indispensable pour que la bulle, le Bienvenue et la détection s'affichent
+        // correctement. (Le terminal Linux aurait besoin de targetSdk 28, mais ça casse le reste.)
+        targetSdk = 34
+        versionCode = 4
+        versionName = "2.2"
 
         // Détection ML Kit uniquement pour les téléphones récents (64 bits) : APK bien plus léger
         ndk { abiFilters += "arm64-v8a" }

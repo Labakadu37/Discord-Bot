@@ -39,6 +39,7 @@
     <string name="mode_android">📱 Android</string>
     <string name="mode_linux">🐧 Linux</string>
     <string name="linux_install">⬇ Installer Linux (4 Mo)</string>
+    <string name="linux_unavailable">\nLe terminal Linux (Python) est indisponible dans cette version : il empêchait la bulle, le Bienvenue et la détection de marcher. Utilise Termux (bouton Termux) en attendant.\n</string>
     <string name="linux_intro">\nLinux (Alpine) n\'est pas encore installé. Appuie sur « Installer Linux » : ça télécharge environ 4 Mo.\nEnsuite : apk add python3 py3-pip, pip, git… comme dans Termux.\n</string>
     <string name="linux_ready">\nLinux prêt ✔ Tape « apk add python3 py3-pip » pour installer Python (~50 Mo), puis « python3 ».\n</string>
     <string name="linux_failed">\nÉchec de l\'installation : %1$s\nVérifie ta connexion et réessaie.\n</string>

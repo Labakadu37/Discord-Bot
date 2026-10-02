@@ -144,6 +144,11 @@ class ToolsActivity : ComponentActivity() {
                 append(getString(R.string.terminal_welcome), ACCENT)
                 setQuickCommands(ANDROID_COMMANDS)
             }
+            applicationInfo.targetSdkVersion >= 29 -> {
+                // Android bloque l'exécution de proot quand l'appli vise Android 10+
+                append(getString(R.string.linux_unavailable), ACCENT)
+                setQuickCommands(emptyList())
+            }
             LinuxEnv.isInstalled(this) -> startLinux()
             else -> {
                 append(getString(R.string.linux_intro), ACCENT)
