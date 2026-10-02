@@ -3,6 +3,7 @@ package com.monimage.launcher
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.app.WallpaperManager
 import android.content.Intent
@@ -10,8 +11,12 @@ import android.content.pm.ServiceInfo
 import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.PixelFormat
+import android.graphics.drawable.Icon
+import android.media.MediaPlayer
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.view.WindowManager
@@ -19,14 +24,19 @@ import kotlin.concurrent.thread
 import kotlin.math.max
 
 /**
- * Accueil RedSmile par-dessus l'écran d'accueil : l'animation (voir [WelcomeStage]) joue
- * sans musique, puis le smiley se pose dans le fond d'écran.
+ * Accueil RedSmile : musique en boucle + animation pendant 5 minutes.
+ * Impossible de fermer l'overlay avant la fin des 5 minutes.
  */
 class WelcomeService : Service() {
 
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
+    private val handler = Handler(Looper.getMainLooper())
     private var overlay: View? = null
-    private var startTime = 0L
+    private var stage: WelcomeStage? = null
+    private var player: MediaPlayer? = null
+    private var musicDurationMs = 1
+    private var lastPos = 0
+    private var lastSync = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,34 +46,69 @@ class WelcomeService : Service() {
             return START_NOT_STICKY
         }
         startInForeground()
-        if (overlay != null) return START_NOT_STICKY
+        if (player != null) return START_NOT_STICKY
 
         thread { setWallpaper() }
-        startTime = SystemClock.uptimeMillis()
+
+        val mp = MediaPlayer.create(this, R.raw.zelenuyu) ?: run { stopSelf(); return START_NOT_STICKY }
+        player = mp
+        musicDurationMs = mp.duration.coerceAtLeast(1)
+        mp.isLooping = true
         showOverlay()
+        mp.start()
+
+        handler.postDelayed({ finishAnimation() }, ANIMATION_DURATION_MS)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        player?.release()
+        player = null
         removeOverlay()
         super.onDestroy()
     }
 
-    private fun musicTime(): Int = (SystemClock.uptimeMillis() - startTime).toInt()
+    /** Position dans la musique, wrappée pour boucler avec la timeline des beats. */
+    private fun musicTime(): Int {
+        val mp = player ?: return 0
+        val now = SystemClock.uptimeMillis()
+        val pos = runCatching { mp.currentPosition }.getOrDefault(lastPos)
+        if (pos != lastPos || lastSync == 0L) {
+            lastPos = pos
+            lastSync = now
+        }
+        val playing = runCatching { mp.isPlaying }.getOrDefault(false)
+        val raw = if (playing) lastPos + (now - lastSync).coerceAtMost(120).toInt() else lastPos
+        return raw % musicDurationMs
+    }
+
+    /** Après 5 minutes : lance l'atterrissage du smiley puis ferme tout. */
+    private fun finishAnimation() {
+        val s = stage
+        if (s != null) {
+            s.skip()
+        } else {
+            removeOverlay()
+            player?.release()
+            player = null
+            stopSelf()
+        }
+    }
 
     private fun showOverlay() {
         val timeline = MusicTimeline.load(resources, R.raw.zelenuyu_beats)
-        val stage = WelcomeStage(
+        val s = WelcomeStage(
             this, timeline, ::musicTime, wallpaperTarget(),
-            onSkip = {
-                removeOverlay()
-                stopSelf()
-            },
+            onSkip = {},
             onFinished = {
                 removeOverlay()
+                player?.release()
+                player = null
                 stopSelf()
             },
         )
+        stage = s
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -77,13 +122,14 @@ class WelcomeService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
-        runCatching { windowManager.addView(stage, params) }.onFailure { return }
-        overlay = stage
+        runCatching { windowManager.addView(s, params) }.onFailure { return }
+        overlay = s
     }
 
     private fun removeOverlay() {
         overlay?.let { runCatching { windowManager.removeView(it) } }
         overlay = null
+        stage = null
     }
 
     private fun wallpaperTarget(): WelcomeStage.Target {
@@ -101,10 +147,20 @@ class WelcomeService : Service() {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel_name), NotificationManager.IMPORTANCE_LOW)
         )
+        val stop = PendingIntent.getService(
+            this, 0, Intent(this, WelcomeService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_text))
+            .addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                    getString(R.string.stop_music), stop,
+                ).build()
+            )
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -136,6 +192,7 @@ class WelcomeService : Service() {
         private const val CHANNEL = "welcome"
         private const val NOTIFICATION_ID = 1
         private const val ACTION_STOP = "com.monimage.launcher.STOP_MUSIC"
+        private const val ANIMATION_DURATION_MS = 5L * 60 * 1000 // 5 minutes
 
         private const val WALL_W = 1476f
         private const val WALL_H = 2624f

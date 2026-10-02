@@ -76,6 +76,7 @@ class WelcomeStage(
     private val sparks = mutableListOf<Spark>()
 
     private var lastFrameNs = 0L
+    private var lastMs = 0
     private var nextBeat = 0
     private var phase = MusicTimeline.Phase.INTRO
     private var kick = 0f          // coup du beat sur le smiley (1 → 0)
@@ -87,10 +88,10 @@ class WelcomeStage(
     private var finished = false
 
     init {
-        setOnTouchListener { _, e -> if (e.action == MotionEvent.ACTION_DOWN) skip(); true }
+        setOnTouchListener { _, _ -> true }
     }
 
-    /** Toucher l'écran : le smiley se pose tout de suite (la musique continue). */
+    /** Déclenché par le service quand les 5 minutes sont écoulées. */
     fun skip() {
         if (landingStartNs == 0L) {
             landingStartNs = System.nanoTime()
@@ -109,7 +110,6 @@ class WelcomeStage(
         val cy = h / 2
         val baseSize = min(w, h) * 0.55f
 
-        if (landingStartNs == 0L && ms >= timeline.landingStartMs) landingStartNs = now
         val landing = if (landingStartNs == 0L) -1f else (now - landingStartNs) / 1e9f
 
         if (landing < 0) updateMusic(ms, cx, cy, w, h)
@@ -159,6 +159,11 @@ class WelcomeStage(
     // --- Musique : beats et changements de phase ---
 
     private fun updateMusic(ms: Int, cx: Float, cy: Float, w: Float, h: Float) {
+        if (ms < lastMs) {
+            nextBeat = 0
+            phase = MusicTimeline.Phase.INTRO
+        }
+        lastMs = ms
         val newPhase = timeline.phaseAt(ms)
         if (newPhase != phase) {
             if (newPhase == MusicTimeline.Phase.DROP) explode(cx, cy, w, h, first = phase == MusicTimeline.Phase.INTRO)
