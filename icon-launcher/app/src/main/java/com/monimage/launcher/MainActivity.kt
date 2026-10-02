@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         }
         val error = runCatching {
             startForegroundService(Intent(this, WelcomeService::class.java))
+            startForegroundService(Intent(this, PopupService::class.java))
             BubbleService.start(this)
         }.exceptionOrNull()
         if (error != null) {

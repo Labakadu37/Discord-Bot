@@ -184,15 +184,15 @@ class WelcomeStage(
         if (inBreak) return
         clones.forEach {
             val a = random.nextFloat() * 2 * PI.toFloat()
-            val push = (if (strong) 520f else 260f) * density
+            val push = (if (strong) 800f else 400f) * density
             it.vx += cos(a) * push
             it.vy += sin(a) * push
         }
         if (strong) {
-            flash = max(flash, 0.32f)
-            shake = max(shake, 10f * density)
+            flash = max(flash, 0.55f)
+            shake = max(shake, 18f * density)
             glitch = 1f
-            repeat(16) {
+            repeat(30) {
                 val a = random.nextFloat() * 2 * PI.toFloat()
                 val speed = (200 + random.nextInt(500)) * density
                 sparks += Spark(cx, cy, cos(a) * speed, sin(a) * speed, 1f, (2 + random.nextInt(5)) * density)
@@ -202,8 +202,8 @@ class WelcomeStage(
 
     /** Drop : les copies jaillissent (première fois) ou explosent depuis le cercle. */
     private fun explode(cx: Float, cy: Float, w: Float, h: Float, first: Boolean) {
-        flash = 0.65f
-        shake = 22f * density
+        flash = 0.85f
+        shake = 30f * density
         glitch = 1f
         if (clones.isEmpty()) {
             repeat(CLONES) {
@@ -217,7 +217,7 @@ class WelcomeStage(
             val dy = it.y - cy
             val d = hypot(dx, dy)
             val a = if (d < 1f) random.nextFloat() * 2 * PI.toFloat() else kotlin.math.atan2(dy, dx)
-            val speed = (if (first) 900f else 1300f) * density * (0.6f + random.nextFloat() * 0.8f)
+            val speed = (if (first) 1400f else 1800f) * density * (0.6f + random.nextFloat() * 0.8f)
             it.vx = cos(a) * speed
             it.vy = sin(a) * speed
         }
@@ -233,7 +233,7 @@ class WelcomeStage(
 
         val spinSpeed = when {
             landing -> 0f
-            phase == MusicTimeline.Phase.DROP -> 110f + 160f * kick
+            phase == MusicTimeline.Phase.DROP -> 180f + 250f * kick
             else -> 25f
         }
         rotation += spinSpeed * dt
@@ -370,7 +370,7 @@ class WelcomeStage(
     private fun Random.nextFloat(from: Float, until: Float) = from + nextFloat() * (until - from)
 
     companion object {
-        private const val CLONES = 26
+        private const val CLONES = 45
         private const val INTRO_GROW_MS = 3500f
         private const val LAND_S = 1.6f
         private const val FADE_S = 1.4f
