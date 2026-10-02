@@ -55,7 +55,10 @@ class WelcomeService : Service() {
         val timeline = MusicTimeline.load(resources, R.raw.zelenuyu_beats)
         val stage = WelcomeStage(
             this, timeline, ::musicTime, wallpaperTarget(),
-            onSkip = {},
+            onSkip = {
+                removeOverlay()
+                stopSelf()
+            },
             onFinished = {
                 removeOverlay()
                 stopSelf()
