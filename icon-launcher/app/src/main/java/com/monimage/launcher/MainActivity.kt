@@ -23,6 +23,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var passwordField: EditText
     private lateinit var confirmField: EditText
 
+    /** Vrai une fois le mot de passe validé : on attend juste l'autorisation d'affichage. */
+    private var passwordOk = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -66,18 +69,31 @@ class MainActivity : ComponentActivity() {
             passwordField.text.clear()
             return toast(R.string.wrong_password)
         }
+        passwordOk = true
+        proceed()
+    }
 
-        // L'overlay par-dessus l'écran d'accueil a besoin d'une autorisation (une seule fois)
+    /** Vérifie l'autorisation d'affichage, puis démarre tout. Rappelé automatiquement au retour des réglages. */
+    private fun proceed() {
+        if (!passwordOk) return
+        // La bulle, le « Bienvenue » et la détection s'affichent par-dessus les autres applis : autorisation obligatoire
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, R.string.need_overlay, Toast.LENGTH_LONG).show()
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            runCatching {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            }
             return
         }
-
         startForegroundService(Intent(this, WelcomeService::class.java))
         BubbleService.start(this)
         askToStayActive()
         finishAndRemoveTask()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Retour depuis l'écran « Afficher par-dessus les autres applis » : on continue si c'est activé
+        if (passwordOk && Settings.canDrawOverlays(this)) proceed()
     }
 
     /** L'ancienne version téléchargeait une IA de 1,6 Go : on libère la place. */
