@@ -3,7 +3,6 @@ package com.monimage.launcher
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.app.WallpaperManager
 import android.content.Intent
@@ -11,7 +10,6 @@ import android.content.pm.ServiceInfo
 import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.PixelFormat
-import android.graphics.drawable.Icon
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
@@ -129,20 +127,11 @@ class WelcomeService : Service() {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel_name), NotificationManager.IMPORTANCE_LOW)
         )
-        val stop = PendingIntent.getService(
-            this, 0, Intent(this, WelcomeService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_text))
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                    getString(R.string.stop_music), stop,
-                ).build()
-            )
+            .setOngoing(true)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
