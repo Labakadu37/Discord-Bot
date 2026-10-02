@@ -2,7 +2,9 @@ package com.monimage.launcher
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -46,6 +48,7 @@ class ToolsActivity : ComponentActivity() {
         findViewById<Button>(R.id.tabInfo).setOnClickListener { showTab(info = true) }
         findViewById<Button>(R.id.tabTerminal).setOnClickListener { showTab(info = false) }
         findViewById<Button>(R.id.btnRefresh).setOnClickListener { loadInfo() }
+        findViewById<Button>(R.id.btnTermux).setOnClickListener { openTermux() }
         findViewById<Button>(R.id.btnGreetingTest).setOnClickListener { BubbleService.testGreeting(this) }
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val voice = findViewById<Button>(R.id.btnVoice)
@@ -96,6 +99,17 @@ class ToolsActivity : ComponentActivity() {
     override fun onDestroy() {
         shell.stop()
         super.onDestroy()
+    }
+
+    /** Ouvre Termux (vrai Linux avec Python…), ou sa page F-Droid s'il n'est pas installé. */
+    private fun openTermux() {
+        val launch = packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE)
+        if (launch != null) {
+            startActivity(launch)
+            return
+        }
+        Toast.makeText(this, R.string.termux_missing, Toast.LENGTH_LONG).show()
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMUX_DOWNLOAD))) }
     }
 
     private fun showTab(info: Boolean) {
@@ -184,6 +198,8 @@ class ToolsActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_LOG = 60_000
+        private const val TERMUX_PACKAGE = "com.termux"
+        private const val TERMUX_DOWNLOAD = "https://f-droid.org/packages/com.termux/"
         private const val ACCENT = 0xFFE53935.toInt()
         private const val PROMPT_COLOR = 0xFFFF8A80.toInt()
         private const val OUTPUT_COLOR = 0xFFE0E0E0.toInt()

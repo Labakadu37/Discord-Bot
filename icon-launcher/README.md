@@ -62,6 +62,9 @@ les commandes, avec des raccourcis (`ip`, `ping`, `df`, `ps`…), l'historique (
 arrêter une commande. Sans root : seules les commandes autorisées à une appli marchent, et
 pas de paquets à installer comme dans Termux.
 
+**Termux** (en haut de la boîte à outils) : ouvre Termux, un vrai Linux avec Python, `pip`, `git`…
+S'il n'est pas installé, le bouton ouvre sa page F-Droid ; ensuite tape `pkg update && pkg install python`.
+
 ## Première utilisation
 
 - Android demande l'autorisation **« Afficher par-dessus les autres applis »** : active-la pour RedSmile,

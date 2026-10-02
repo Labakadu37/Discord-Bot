@@ -25,6 +25,8 @@
     <string name="tools_title">Outils RedSmile</string>
     <string name="tab_info">Infos</string>
     <string name="tab_terminal">Terminal</string>
+    <string name="termux">Termux</string>
+    <string name="termux_missing">Termux n\'est pas installé : installe-le depuis F-Droid, puis tape « pkg install python ».</string>
     <string name="refresh">Actualiser</string>
     <string name="copied">Copié</string>
     <string name="terminal_hint">commande…</string>

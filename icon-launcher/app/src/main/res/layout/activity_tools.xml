@@ -47,6 +47,15 @@
             android:text="@string/tab_terminal"
             android:textAllCaps="false"
             android:textColor="#FFFFFFFF" />
+
+        <Button
+            android:id="@+id/btnTermux"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/termux"
+            android:textAllCaps="false"
+            android:textColor="#FFE53935" />
     </LinearLayout>
 
     <!-- Onglet Infos -->
