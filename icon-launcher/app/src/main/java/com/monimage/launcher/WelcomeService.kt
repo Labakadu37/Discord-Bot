@@ -14,9 +14,7 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.Icon
 import android.media.MediaPlayer
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.view.WindowManager
@@ -24,13 +22,12 @@ import kotlin.concurrent.thread
 import kotlin.math.max
 
 /**
- * Accueil RedSmile : musique en boucle + animation pendant 5 minutes.
- * Impossible de fermer l'overlay avant la fin des 5 minutes.
+ * Accueil RedSmile : musique en boucle + animation en continu.
+ * Tourne jusqu'au redémarrage du téléphone ou bouton Stop dans la notification.
  */
 class WelcomeService : Service() {
 
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
-    private val handler = Handler(Looper.getMainLooper())
     private var overlay: View? = null
     private var stage: WelcomeStage? = null
     private var player: MediaPlayer? = null
@@ -57,12 +54,10 @@ class WelcomeService : Service() {
         showOverlay()
         mp.start()
 
-        handler.postDelayed({ finishAnimation() }, ANIMATION_DURATION_MS)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null)
         player?.release()
         player = null
         removeOverlay()
@@ -81,19 +76,6 @@ class WelcomeService : Service() {
         val playing = runCatching { mp.isPlaying }.getOrDefault(false)
         val raw = if (playing) lastPos + (now - lastSync).coerceAtMost(120).toInt() else lastPos
         return raw % musicDurationMs
-    }
-
-    /** Après 5 minutes : lance l'atterrissage du smiley puis ferme tout. */
-    private fun finishAnimation() {
-        val s = stage
-        if (s != null) {
-            s.skip()
-        } else {
-            removeOverlay()
-            player?.release()
-            player = null
-            stopSelf()
-        }
     }
 
     private fun showOverlay() {
@@ -192,8 +174,6 @@ class WelcomeService : Service() {
         private const val CHANNEL = "welcome"
         private const val NOTIFICATION_ID = 1
         private const val ACTION_STOP = "com.monimage.launcher.STOP_MUSIC"
-        private const val ANIMATION_DURATION_MS = 5L * 60 * 1000 // 5 minutes
-
         private const val WALL_W = 1476f
         private const val WALL_H = 2624f
         private const val SMILE_X = 735f
