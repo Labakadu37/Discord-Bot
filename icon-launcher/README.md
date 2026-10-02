@@ -62,6 +62,12 @@ les commandes, avec des raccourcis (`ip`, `ping`, `df`, `ps`…), l'historique (
 arrêter une commande. Sans root : seules les commandes autorisées à une appli marchent, et
 pas de paquets à installer comme dans Termux.
 
+**Terminal Linux** (bouton 🐧 Linux dans l'onglet Terminal) : un vrai Linux (Alpine) lancé avec
+proot, comme dans Termux, sans root. Au premier usage, **Installer Linux** télécharge environ 4 Mo.
+Ensuite : `apk add python3 py3-pip` (ou le raccourci « installer python »), `python3` (console),
+`python3 script.py`, `pip install …`, `apk add git`… Pour pouvoir lancer ces programmes, l'appli vise
+Android 9 (`targetSdk 28`), exactement comme Termux.
+
 **Termux** (en haut de la boîte à outils) : ouvre Termux, un vrai Linux avec Python, `pip`, `git`…
 S'il n'est pas installé, le bouton ouvre sa page F-Droid ; ensuite tape `pkg update && pkg install python`.
 

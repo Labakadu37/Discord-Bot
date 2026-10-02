@@ -30,7 +30,9 @@ class ToolsActivity : ComponentActivity() {
     private lateinit var output: TextView
     private lateinit var outputScroll: ScrollView
     private lateinit var input: EditText
-    private lateinit var shell: Shell
+    private var shell: Shell? = null
+    private var linuxMode = false
+    private var installing = false
     private val log = SpannableStringBuilder()
     private val history = mutableListOf<String>()
     private var historyIndex = 0
@@ -63,9 +65,9 @@ class ToolsActivity : ComponentActivity() {
             showVoice()
         }
 
-        shell = Shell(filesDir) { text -> runOnUiThread { append(text, OUTPUT_COLOR) } }
-        shell.start()
-        append(getString(R.string.terminal_welcome), ACCENT)
+        findViewById<Button>(R.id.modeAndroid).setOnClickListener { switchMode(linux = false) }
+        findViewById<Button>(R.id.modeLinux).setOnClickListener { switchMode(linux = true) }
+        switchMode(linux = LinuxEnv.isInstalled(this))
 
         findViewById<Button>(R.id.btnRun).setOnClickListener { runInput() }
         input.setOnEditorActionListener { _, action, event ->
@@ -75,21 +77,12 @@ class ToolsActivity : ComponentActivity() {
         }
         findViewById<Button>(R.id.btnUp).setOnClickListener { browseHistory(-1) }
         findViewById<Button>(R.id.btnStop).setOnClickListener {
-            shell.start()
+            shell?.start()
             append(getString(R.string.terminal_stopped), ACCENT)
         }
         findViewById<Button>(R.id.btnClear).setOnClickListener {
             log.clear()
             output.text = ""
-        }
-        QUICK_COMMANDS.forEach { (label, command) ->
-            val button = Button(this, null, android.R.attr.borderlessButtonStyle).apply {
-                text = label
-                isAllCaps = false
-                setTextColor(ACCENT)
-                setOnClickListener { execute(command) }
-            }
-            findViewById<LinearLayout>(R.id.quickCommands).addView(button)
         }
 
         showTab(info = true)
@@ -97,8 +90,82 @@ class ToolsActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        shell.stop()
+        shell?.stop()
         super.onDestroy()
+    }
+
+    /** Terminal Android (commandes du téléphone) ou Linux intégré (Alpine : python, pip, git…). */
+    private fun switchMode(linux: Boolean) {
+        linuxMode = linux
+        findViewById<Button>(R.id.modeAndroid).alpha = if (linux) 0.5f else 1f
+        findViewById<Button>(R.id.modeLinux).alpha = if (linux) 1f else 0.5f
+        shell?.stop()
+        shell = null
+        log.clear()
+        output.text = ""
+        when {
+            !linux -> {
+                startShell(Shell(filesDir, onOutput = ::onShellOutput))
+                append(getString(R.string.terminal_welcome), ACCENT)
+                setQuickCommands(ANDROID_COMMANDS)
+            }
+            LinuxEnv.isInstalled(this) -> startLinux()
+            else -> {
+                append(getString(R.string.linux_intro), ACCENT)
+                setQuickCommands(emptyList())
+                addQuickButton(getString(R.string.linux_install)) { installLinux() }
+            }
+        }
+    }
+
+    private fun startLinux() {
+        startShell(Shell(filesDir, LinuxEnv.shellCommand(this), LinuxEnv.shellEnv(this), ::onShellOutput))
+        setQuickCommands(LINUX_COMMANDS)
+    }
+
+    private fun startShell(newShell: Shell) {
+        shell = newShell
+        newShell.start()
+    }
+
+    private fun onShellOutput(text: String) = runOnUiThread { append(text, OUTPUT_COLOR) }
+
+    private fun installLinux() {
+        if (installing) return
+        installing = true
+        setQuickCommands(emptyList())
+        thread {
+            val error = runCatching {
+                LinuxEnv.install(this) { step -> runOnUiThread { append("$step\n", ACCENT) } }
+            }.exceptionOrNull()
+            runOnUiThread {
+                installing = false
+                if (isDestroyed || !linuxMode) return@runOnUiThread
+                if (error == null) {
+                    append(getString(R.string.linux_ready), ACCENT)
+                    startLinux()
+                } else {
+                    LinuxEnv.uninstall(this)
+                    append(getString(R.string.linux_failed, error.message ?: error.javaClass.simpleName), ACCENT)
+                    addQuickButton(getString(R.string.linux_install)) { installLinux() }
+                }
+            }
+        }
+    }
+
+    private fun setQuickCommands(commands: List<Pair<String, String>>) {
+        findViewById<LinearLayout>(R.id.quickCommands).removeAllViews()
+        commands.forEach { (label, command) -> addQuickButton(label) { execute(command) } }
+    }
+
+    private fun addQuickButton(label: String, action: () -> Unit) {
+        val button = Button(this, null, android.R.attr.borderlessButtonStyle).apply {
+            text = label
+            isAllCaps = false
+            setTextColor(ACCENT)
+            setOnClickListener { action() }
+        }
+        findViewById<LinearLayout>(R.id.quickCommands).addView(button)
     }
 
     /** Ouvre Termux (vrai Linux avec Python…), ou sa page F-Droid s'il n'est pas installé. */
@@ -175,8 +242,9 @@ class ToolsActivity : ComponentActivity() {
             output.text = ""
             return
         }
+        val current = shell ?: return
         append("\n$ $command\n", PROMPT_COLOR)
-        shell.run(command)
+        current.run(command)
     }
 
     private fun browseHistory(step: Int) {
@@ -204,7 +272,17 @@ class ToolsActivity : ComponentActivity() {
         private const val PROMPT_COLOR = 0xFFFF8A80.toInt()
         private const val OUTPUT_COLOR = 0xFFE0E0E0.toInt()
 
-        private val QUICK_COMMANDS = listOf(
+        private val LINUX_COMMANDS = listOf(
+            "installer python" to "apk add python3 py3-pip && python3 --version",
+            "python" to "python3",
+            "pip list" to "pip list",
+            "git" to "apk add git && git --version",
+            "mise à jour" to "apk update && apk upgrade",
+            "système" to "head -2 /etc/os-release; uname -m",
+            "ls" to "ls -la",
+        )
+
+        private val ANDROID_COMMANDS = listOf(
             "ip" to "ip addr | grep inet",
             "ping" to "ping -c 4 8.8.8.8",
             "dns" to "getprop | grep dns",

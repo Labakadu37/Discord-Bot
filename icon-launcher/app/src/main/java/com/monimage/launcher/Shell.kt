@@ -5,20 +5,34 @@ import java.io.InputStreamReader
 import kotlin.concurrent.thread
 
 /**
- * Terminal : un vrai shell Android (/system/bin/sh) qui garde son état entre les commandes
- * (dossier courant, variables…). Pas de root : ce sont les commandes accessibles à une appli.
+ * Terminal : un shell qui garde son état entre les commandes (dossier courant, variables…).
+ * Par défaut le shell d'Android (/system/bin/sh) ; [command] permet de lancer le Linux intégré.
  */
-class Shell(private val home: File, private val onOutput: (String) -> Unit) {
+class Shell(
+    private val home: File,
+    private val command: List<String> = listOf("/system/bin/sh"),
+    private val extraEnv: Map<String, String> = emptyMap(),
+    private val onOutput: (String) -> Unit,
+) {
 
     private var process: Process? = null
 
     fun start() {
         stop()
-        val p = ProcessBuilder("/system/bin/sh")
-            .directory(home)
-            .redirectErrorStream(true)
-            .apply { environment()["HOME"] = home.absolutePath; environment()["TERM"] = "dumb" }
-            .start()
+        val p = runCatching {
+            ProcessBuilder(command)
+                .directory(home)
+                .redirectErrorStream(true)
+                .apply {
+                    environment()["HOME"] = home.absolutePath
+                    environment()["TERM"] = "dumb"
+                    environment().putAll(extraEnv)
+                }
+                .start()
+        }.getOrElse {
+            onOutput("[impossible de lancer le shell : ${it.message}]\n")
+            return
+        }
         process = p
         thread(isDaemon = true) {
             val reader = InputStreamReader(p.inputStream)
@@ -32,7 +46,7 @@ class Shell(private val home: File, private val onOutput: (String) -> Unit) {
     }
 
     fun run(command: String) {
-        val p = process?.takeIf { it.isAlive } ?: run { start(); process!! }
+        val p = process?.takeIf { it.isAlive } ?: run { start(); process } ?: return
         runCatching {
             p.outputStream.write((command + "\n").toByteArray())
             p.outputStream.flush()

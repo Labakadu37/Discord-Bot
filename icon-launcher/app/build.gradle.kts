@@ -10,9 +10,11 @@ android {
     defaultConfig {
         applicationId = "com.monimage.launcher"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Comme Termux : depuis Android 10, une appli qui vise une version plus récente n'a plus le droit
+        // de lancer les programmes qu'elle télécharge (ici proot + Alpine Linux du terminal Linux)
+        targetSdk = 28
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildTypes {
