@@ -30,6 +30,19 @@ class ToolsActivity : ComponentActivity() {
     private lateinit var output: TextView
     private lateinit var outputScroll: ScrollView
     private lateinit var input: EditText
+    private lateinit var detectionButton: Button
+    private val captureConsent = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+        if (result.resultCode == RESULT_OK && data != null) {
+            DetectionService.start(this, result.resultCode, data)
+            detectionButton.postDelayed({ showDetectionState() }, 500)
+            moveTaskToBack(true) // on laisse l'écran libre pour voir les cadres
+        } else {
+            Toast.makeText(this, R.string.detect_refused, Toast.LENGTH_LONG).show()
+        }
+    }
     private var shell: Shell? = null
     private var linuxMode = false
     private var installing = false
@@ -51,6 +64,8 @@ class ToolsActivity : ComponentActivity() {
         findViewById<Button>(R.id.tabTerminal).setOnClickListener { showTab(info = false) }
         findViewById<Button>(R.id.btnRefresh).setOnClickListener { loadInfo() }
         findViewById<Button>(R.id.btnTermux).setOnClickListener { openTermux() }
+        detectionButton = findViewById(R.id.btnDetection)
+        detectionButton.setOnClickListener { toggleDetection() }
         findViewById<Button>(R.id.btnGreetingTest).setOnClickListener { BubbleService.testGreeting(this) }
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         val voice = findViewById<Button>(R.id.btnVoice)
@@ -89,9 +104,29 @@ class ToolsActivity : ComponentActivity() {
         loadInfo()
     }
 
+    override fun onResume() {
+        super.onResume()
+        showDetectionState()
+    }
+
     override fun onDestroy() {
         shell?.stop()
         super.onDestroy()
+    }
+
+    /** Détection à l'écran : Android demande l'accord pour la capture à chaque démarrage. */
+    private fun toggleDetection() {
+        if (DetectionService.running) {
+            DetectionService.stop(this)
+            detectionButton.postDelayed({ showDetectionState() }, 300)
+        } else {
+            val mpm = getSystemService(android.media.projection.MediaProjectionManager::class.java)
+            captureConsent.launch(mpm.createScreenCaptureIntent())
+        }
+    }
+
+    private fun showDetectionState() {
+        detectionButton.setText(if (DetectionService.running) R.string.detect_stop_button else R.string.detect_start)
     }
 
     /** Terminal Android (commandes du téléphone) ou Linux intégré (Alpine : python, pip, git…). */

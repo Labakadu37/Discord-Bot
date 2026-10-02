@@ -17,6 +17,8 @@
     <!-- Boîte à outils : IP publique, état du réseau -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Détection à l'écran (capture de l'écran, analysée dans le téléphone) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
     <!-- Pour savoir si Termux est installé (bouton Termux de la boîte à outils) -->
     <queries>
@@ -61,6 +63,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Bulle flottante et message d'accueil au déverrouillage" />
         </service>
+
+        <service
+            android:name=".DetectionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
         <receiver
             android:name=".BootReceiver"

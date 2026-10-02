@@ -57,6 +57,13 @@ même quand RedSmile est fermée (et elle revient après un redémarrage du tél
 version d'Android, processeur, batterie (%, température, tension), mémoire vive, stockage, écran,
 temps depuis l'allumage. Touche une valeur pour la copier.
 
+**🎯 Détection à l'écran** (onglet Infos) : RedSmile regarde l'écran en continu et met un cadre rouge
+autour de chaque visage et objet détecté ; le cadre suit la cible quand elle bouge. Tout est analysé dans
+le téléphone (ML Kit de Google), rien n'est enregistré ni envoyé. Android demande d'accepter la capture
+d'écran à chaque démarrage ; « Arrêter » dans la notification ou le même bouton pour couper. Pause
+automatique écran éteint. Les applis protégées (Netflix, banques…) apparaissent en noir et ne sont pas
+analysées ; les visages réels sont bien détectés, les personnages dessinés de jeux moins bien.
+
 **Terminal** : un vrai shell Android (`/system/bin/sh`) qui garde son dossier et ses variables entre
 les commandes, avec des raccourcis (`ip`, `ping`, `df`, `ps`…), l'historique (↑) et ■ Stop pour
 arrêter une commande. Sans root : seules les commandes autorisées à une appli marchent, et

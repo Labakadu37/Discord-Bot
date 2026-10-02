@@ -26,6 +26,14 @@
     <string name="tab_info">Infos</string>
     <string name="tab_terminal">Terminal</string>
     <string name="termux">Termux</string>
+    <string name="detect_start">🎯 Démarrer la détection à l\'écran</string>
+    <string name="detect_stop_button">⏹ Arrêter la détection à l\'écran</string>
+    <string name="detect_channel">Détection à l\'écran</string>
+    <string name="detect_notification">Détection active : visages et objets encadrés</string>
+    <string name="detect_stop">Arrêter</string>
+    <string name="detect_face">VISAGE</string>
+    <string name="detect_object">CIBLE</string>
+    <string name="detect_refused">Il faut accepter la capture d\'écran pour que la détection marche.</string>
     <string name="mode_android">📱 Android</string>
     <string name="mode_linux">🐧 Linux</string>
     <string name="linux_install">⬇ Installer Linux (4 Mo)</string>
