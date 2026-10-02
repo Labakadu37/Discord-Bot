@@ -1,0 +1,5 @@
+# Assemble index.html en y injectant l'image RedSmile en base64 (page autonome, hors ligne)
+b64 = open('/tmp/claude-0/-home-user-Discord-Bot/94a39f8b-ae49-5674-8f1b-6c6767df7cae/scratchpad/smile.b64').read().strip()
+tmpl = open('template.html').read()
+open('index.html','w').write(tmpl.replace('__SMILE_B64__', b64))
+print('index.html', len(open('index.html').read()), 'octets')
