@@ -1,7 +1,7 @@
 'use strict';
 
 const { createClient, sleep } = require('./telegram');
-const { extractSources, fetchEmojiImage } = require('./emoji');
+const { extractSources, stripPackLinks, fetchEmojiImage } = require('./emoji');
 const { toStaticEmoji, rescaleTgs, rescaleWebm } = require('./convert');
 const { Store } = require('./store');
 
@@ -9,23 +9,36 @@ const MAX_EMOJIS = 200; // Telegram limit for a custom emoji pack
 const FALLBACK_EMOJI = '⭐';
 
 const COMMANDS = [
-    { command: 'newpack', description: 'Créer un nouveau pack d’emojis' },
-    { command: 'packs', description: 'Mes packs / choisir celui à remplir' },
-    { command: 'remove', description: 'Retirer des emojis de mon pack' },
-    { command: 'help', description: 'Comment ça marche' },
+    { command: 'createpack', description: 'Créer un pack : /createpack Nom' },
+    { command: 'addemoji', description: 'Ajouter des emojis à ton pack' },
+    { command: 'removeemoji', description: 'Retirer des emojis de ton pack' },
+    { command: 'renamepack', description: 'Renommer ton pack' },
+    { command: 'copypack', description: 'Copier un pack entier dans un nouveau pack' },
+    { command: 'seticon', description: 'Choisir l’icône de ton pack' },
+    { command: 'mypacks', description: 'Tes packs / choisir celui à utiliser' },
+    { command: 'deletepack', description: 'Supprimer ton pack' },
+    { command: 'help', description: 'Toutes les commandes' },
 ];
 
 const HELP = [
     '👋 <b>Je crée tes packs d’emojis !</b>',
     '',
-    '1️⃣ <code>/newpack Nom du pack</code> pour créer un pack',
-    '2️⃣ Envoie-moi des emojis : des emojis d’autres packs, des emojis normaux, des stickers, des images, '
-        + 'ou un lien <code>t.me/addemoji/…</code> pour copier un pack entier',
-    '3️⃣ Je les mets direct dans ton pack et je te donne le lien ✨',
+    '/createpack <i>Nom</i> : crée un pack',
+    '/addemoji <i>emojis</i> : ajoute des emojis à ton pack (emojis d’autres packs, emojis normaux, '
+        + 'stickers, images, ou un lien t.me/addemoji/… pour ajouter tout un pack)',
+    '/removeemoji <i>emojis</i> : retire des emojis de ton pack',
+    '/renamepack <i>Nom</i> : renomme ton pack',
+    '/copypack <i>lien</i> : copie un pack entier dans un nouveau pack',
+    '/seticon <i>emoji</i> : choisit l’icône de ton pack',
+    '/mypacks : tes packs et celui que tu utilises',
+    '/deletepack : supprime ton pack',
     '',
-    '/packs : voir tes packs et choisir celui à remplir',
-    '/remove : réponds avec /remove à un message qui contient des emojis de ton pack pour les retirer',
+    '💡 Tu peux aussi répondre à un message avec /addemoji ou /removeemoji.',
+    '💡 Je marche en privé et dans les groupes. En privé, tu peux même m’envoyer les emojis sans commande.',
 ].join('\n');
+
+const NO_PACK = 'Tu n’as pas de pack sélectionné.\nCrée-en un avec <code>/createpack Nom du pack</code> '
+    + 'ou choisis-en un avec /mypacks.';
 
 class FatalError extends Error {}
 class PackFullError extends Error {}
@@ -34,6 +47,8 @@ const escapeHtml = (text) => String(text).replace(/[&<>]/g, (c) => ({ '&': '&amp
 const packLink = (name) => `https://t.me/addemoji/${name}`;
 const stickerFormat = (sticker) => (sticker.is_animated ? 'animated' : sticker.is_video ? 'video' : 'static');
 const explain = (err) => (err.description || err.message || String(err)).replace(/^Bad Request: /, '');
+const isGone = (err) => /STICKERSET_INVALID/i.test(err.description || '');
+const cut = (text, max = 64) => Array.from(text).slice(0, max).join('').trim();
 
 /** Pack names must end with _by_<bot> and only use letters, digits and single underscores. */
 function makePackName(title, botUsername) {
@@ -54,106 +69,49 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
     const api = createClient(token, apiRoot);
     const store = new Store(dataFile);
     const queues = new Map();
-    let botUsername = null;
+    let me = null;
     let running = true;
 
-    const send = (chatId, text, extra = {}) => api.call('sendMessage', {
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-        link_preview_options: { is_disabled: true },
-        ...extra,
-    });
+    // ----- helpers -------------------------------------------------------------
 
-    // one task at a time per user, so two batches never mix
-    function enqueue(userId, chatId, task) {
-        const next = (queues.get(userId) || Promise.resolve()).then(task).catch((err) => {
-            console.error(err);
-            return send(chatId, `❌ Oups, une erreur : ${escapeHtml(explain(err))}`).catch(() => {});
-        });
-        queues.set(userId, next);
-        next.then(() => {
-            if (queues.get(userId) === next) queues.delete(userId);
+    function reply(ctx, text, extra = {}) {
+        return api.call('sendMessage', {
+            chat_id: ctx.chatId,
+            text,
+            parse_mode: 'HTML',
+            link_preview_options: { is_disabled: true },
+            reply_parameters: { message_id: ctx.msg.message_id, allow_sending_without_reply: true },
+            ...extra,
         });
     }
 
-    function dispatch(update) {
-        const query = update.callback_query;
-        if (query) {
-            enqueue(query.from.id, query.message?.chat.id ?? query.from.id, () => onCallback(query));
-            return;
-        }
-        const msg = update.message;
-        if (!msg || !msg.from || msg.chat.type !== 'private') return;
-        enqueue(msg.from.id, msg.chat.id, () => onMessage(msg));
+    function editButtonMessage(query, text) {
+        if (!query.message) return null;
+        return api.call('editMessageText', {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            text,
+            parse_mode: 'HTML',
+            link_preview_options: { is_disabled: true },
+        }).catch(() => {});
     }
 
-    function parseCommand(msg) {
-        const text = msg.text || '';
-        const first = (msg.entities || [])[0];
-        if (!first || first.type !== 'bot_command' || first.offset !== 0) return null;
-        const [name, mention] = text.slice(1, first.length).toLowerCase().split('@');
-        if (mention && mention !== botUsername.toLowerCase()) return null;
-        return { name, args: text.slice(first.length).trim() };
-    }
+    const answer = (query, text) => api.call('answerCallbackQuery', { callback_query_id: query.id, text });
 
-    async function onMessage(msg) {
-        const ctx = { userId: msg.from.id, chatId: msg.chat.id, user: store.user(msg.from.id) };
-        const command = parseCommand(msg);
-        if (!command) return addEmojis(msg, ctx);
+    const currentPack = (user) => user.packs.find((pack) => pack.name === user.current) || null;
 
-        switch (command.name) {
-            case 'newpack':
-            case 'nouveau':
-                return newPack(ctx, command.args);
-            case 'packs':
-                return listPacks(ctx);
-            case 'remove':
-            case 'supprimer':
-                return removeEmojis(msg, ctx);
-            case 'cancel':
-                ctx.user.pendingTitle = null;
-                store.save();
-                return send(ctx.chatId, 'OK, annulé.');
-            default:
-                return send(ctx.chatId, HELP);
-        }
-    }
-
-    async function newPack(ctx, args) {
-        const title = Array.from(args).slice(0, 64).join('').trim();
-        if (!title) return send(ctx.chatId, 'Donne un nom à ton pack, par exemple :\n<code>/newpack Jz Brawl</code>');
-        ctx.user.pendingTitle = title;
+    function forgetPack(user, name) {
+        user.packs = user.packs.filter((pack) => pack.name !== name);
+        if (user.current === name) user.current = null;
+        if (user.pendingDelete === name) user.pendingDelete = null;
         store.save();
-        return send(ctx.chatId, `🆕 Pack « <b>${escapeHtml(title)}</b> » prêt !\n\n`
-            + 'Envoie-moi maintenant tes emojis (emojis d’autres packs, emojis normaux, stickers, images, '
-            + 'ou un lien t.me/addemoji/…). Je crée le pack dès le premier emoji.');
     }
 
-    async function listPacks(ctx) {
-        const { user } = ctx;
-        if (!user.packs.length) return send(ctx.chatId, 'Tu n’as pas encore de pack. Crée-en un avec\n<code>/newpack Nom du pack</code>');
-        const lines = user.packs.map((pack) => `${pack.name === user.current ? '👉' : '▫️'} <b>${escapeHtml(pack.title)}</b>\n${packLink(pack.name)}`);
-        if (user.pendingTitle) lines.push(`🆕 Prochain pack : <b>${escapeHtml(user.pendingTitle)}</b> (créé au prochain emoji)`);
-        const keyboard = user.packs.map((pack, i) => [{
-            text: `${pack.name === user.current ? '✅ ' : ''}${pack.title}`,
-            callback_data: `use:${i}`,
-        }]);
-        return send(ctx.chatId, `Tes packs (👉 = celui que je remplis) :\n\n${lines.join('\n\n')}\n\nAppuie sur un pack pour le remplir.`, {
-            reply_markup: { inline_keyboard: keyboard },
-        });
-    }
-
-    async function onCallback(query) {
-        const user = store.user(query.from.id);
-        const match = /^use:(\d+)$/.exec(query.data || '');
-        const pack = match && user.packs[Number(match[1])];
-        if (!pack) return api.call('answerCallbackQuery', { callback_query_id: query.id, text: 'Pack introuvable' });
-        user.current = pack.name;
-        user.pendingTitle = null;
-        store.save();
-        await api.call('answerCallbackQuery', { callback_query_id: query.id, text: `Je remplis « ${pack.title} »` });
-        return send(query.message?.chat.id ?? query.from.id, `✅ J’ajoute maintenant tes emojis dans « <b>${escapeHtml(pack.title)}</b> ».`);
+    /** Sources of the message itself + of the message it replies to. */
+    function allSources(msg) {
+        const replied = msg.reply_to_message;
+        const usable = replied && !replied.forum_topic_created && replied.from?.id !== me.id;
+        return [...extractSources(msg), ...(usable ? extractSources(replied) : [])];
     }
 
     async function getCustomEmojis(ids) {
@@ -164,12 +122,182 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
         return stickers;
     }
 
-    async function removeEmojis(msg, ctx) {
-        const sources = [...extractSources(msg), ...(msg.reply_to_message ? extractSources(msg.reply_to_message) : [])];
-        const ids = [...new Set(sources.filter((s) => s.type === 'custom').map((s) => s.id))];
+    const customIds = (sources) => [...new Set(sources.filter((s) => s.type === 'custom').map((s) => s.id))];
+
+    // ----- updates ---------------------------------------------------------------
+
+    // one task at a time per user, so two batches never mix
+    function enqueue(userId, chatId, task) {
+        const next = (queues.get(userId) || Promise.resolve()).then(task).catch((err) => {
+            console.error(err);
+            return api.call('sendMessage', {
+                chat_id: chatId,
+                text: `❌ Oups, une erreur : ${escapeHtml(explain(err))}`,
+                parse_mode: 'HTML',
+            }).catch(() => {});
+        });
+        queues.set(userId, next);
+        next.then(() => {
+            if (queues.get(userId) === next) queues.delete(userId);
+        });
+    }
+
+    function dispatch(update) {
+        const query = update.callback_query;
+        if (query) {
+            enqueue(query.from.id, query.message?.chat.id ?? query.from.id, () => onButton(query));
+            return;
+        }
+        const msg = update.message;
+        if (!msg || !msg.from || msg.from.is_bot) return;
+        enqueue(msg.from.id, msg.chat.id, () => onMessage(msg));
+    }
+
+    function parseCommand(msg) {
+        const text = msg.text ?? msg.caption ?? '';
+        const first = (msg.entities ?? msg.caption_entities ?? [])[0];
+        if (!first || first.type !== 'bot_command' || first.offset !== 0) return null;
+        const [name, mention] = text.slice(1, first.length).toLowerCase().split('@');
+        if (mention && mention !== me.username.toLowerCase()) return null;
+        return { name, end: first.length, args: text.slice(first.length).trim() };
+    }
+
+    const handlers = {
+        start: showHelp,
+        help: showHelp,
+        aide: showHelp,
+        createpack: createPack,
+        newpack: createPack,
+        addemoji: addCommand,
+        add: addCommand,
+        removeemoji: removeEmojis,
+        remove: removeEmojis,
+        renamepack: renamePack,
+        rename: renamePack,
+        copypack: copyPack,
+        clonepack: copyPack,
+        seticon: setIcon,
+        mypacks: listPacks,
+        packs: listPacks,
+        deletepack: askDeletePack,
+        cancel,
+    };
+
+    async function onMessage(msg) {
+        const ctx = {
+            msg,
+            userId: msg.from.id,
+            chatId: msg.chat.id,
+            user: store.user(msg.from.id),
+            isPrivate: msg.chat.type === 'private',
+        };
+        const command = parseCommand(msg);
+        if (!command) {
+            // in private chat, emojis sent without a command are added too
+            if (ctx.isPrivate) return addEmojis(ctx, extractSources(msg));
+            return null;
+        }
+        const handler = handlers[command.name];
+        if (handler) return handler(ctx, command);
+        return ctx.isPrivate ? showHelp(ctx) : null;
+    }
+
+    // ----- commands --------------------------------------------------------------
+
+    function showHelp(ctx) {
+        return reply(ctx, HELP);
+    }
+
+    async function createPack(ctx, command) {
+        // "/createpack Jz Brawl 🔥💀": the name is the text before the first emoji or link
+        const own = extractSources(ctx.msg);
+        const text = ctx.msg.text ?? ctx.msg.caption ?? '';
+        const offsets = own.map((s) => s.at).filter((at) => at !== undefined);
+        const title = cut(text.slice(command.end, offsets.length ? Math.min(...offsets) : text.length));
+        if (!title) {
+            return reply(ctx, 'Donne un nom à ton pack :\n<code>/createpack Jz Brawl</code>\n\n'
+                + '💡 Tu peux mettre des emojis juste après le nom pour les ajouter direct.');
+        }
+        ctx.user.pendingTitle = title;
+        ctx.user.pendingDelete = null;
+        store.save();
+
+        const sources = allSources(ctx.msg);
+        if (sources.length) return addEmojis(ctx, sources);
+        return reply(ctx, `🆕 Pack « <b>${escapeHtml(title)}</b> » prêt !\n\n`
+            + 'Ajoute tes emojis avec <code>/addemoji</code> suivi des emojis (ou réponds à un message avec /addemoji).\n'
+            + 'Telegram crée le pack dès le premier emoji ajouté.');
+    }
+
+    function addCommand(ctx) {
+        const sources = allSources(ctx.msg);
+        if (!sources.length) {
+            return reply(ctx, 'Envoie <code>/addemoji</code> suivi de tes emojis 🔥💀…\n\n'
+                + '• des emojis d’autres packs ou des emojis normaux\n'
+                + '• un lien <code>t.me/addemoji/…</code> pour ajouter tout un pack\n'
+                + '• ou réponds à un message (emojis, sticker, image) avec /addemoji');
+        }
+        return addEmojis(ctx, sources);
+    }
+
+    async function renamePack(ctx, command) {
+        const title = cut(command.args);
+        if (!title) return reply(ctx, 'Écris le nouveau nom :\n<code>/renamepack Nouveau nom</code>');
+        const { user } = ctx;
+        if (user.pendingTitle) {
+            user.pendingTitle = title;
+            store.save();
+            return reply(ctx, `✏️ Ton nouveau pack s’appellera « <b>${escapeHtml(title)}</b> ».`);
+        }
+        const pack = currentPack(user);
+        if (!pack) return reply(ctx, NO_PACK);
+        try {
+            await api.call('setStickerSetTitle', { name: pack.name, title });
+        } catch (err) {
+            if (!isGone(err)) throw err;
+            forgetPack(user, pack.name);
+            return reply(ctx, `Le pack « ${escapeHtml(pack.title)} » n’existe plus.\n${NO_PACK}`);
+        }
+        pack.title = title;
+        store.save();
+        return reply(ctx, `✏️ Pack renommé en « <b>${escapeHtml(title)}</b> » !\n${packLink(pack.name)}`);
+    }
+
+    async function copyPack(ctx, command) {
+        const link = allSources(ctx.msg).find((s) => s.type === 'pack');
+        if (!link) {
+            return reply(ctx, 'Envoie le lien du pack à copier :\n<code>/copypack https://t.me/addemoji/NomDuPack</code>\n\n'
+                + '💡 Tu peux écrire un nom après le lien pour ta copie.');
+        }
+        let set;
+        try {
+            set = await api.call('getStickerSet', { name: link.name });
+        } catch {
+            return reply(ctx, `❌ Je ne trouve pas le pack « ${escapeHtml(link.name)} ».`);
+        }
+        const title = cut(stripPackLinks(command.args)) || cut(set.title);
+        return addEmojis(ctx, [{ type: 'set', set }], { newPackTitle: title });
+    }
+
+    async function setIcon(ctx) {
+        const { user } = ctx;
+        if (!user.packs.length) return reply(ctx, NO_PACK);
+        const ids = customIds(allSources(ctx.msg));
+        if (!ids.length) return reply(ctx, 'Envoie <code>/seticon</code> suivi d’un emoji de ton pack.');
+        const mine = new Map(user.packs.map((pack) => [pack.name, pack]));
+        const stickers = await getCustomEmojis(ids);
+        const icon = stickers.find((s) => s.set_name === user.current) || stickers.find((s) => mine.has(s.set_name));
+        if (!icon) return reply(ctx, 'Cet emoji n’est dans aucun de tes packs. Envoie /seticon suivi d’un emoji de ton pack.');
+        const pack = mine.get(icon.set_name);
+        await api.call('setCustomEmojiStickerSetThumbnail', { name: pack.name, custom_emoji_id: icon.custom_emoji_id });
+        return reply(ctx, `🖼️ Icône du pack « <b>${escapeHtml(pack.title)}</b> » changée !`);
+    }
+
+    async function removeEmojis(ctx) {
+        const ids = customIds(allSources(ctx.msg));
         if (!ids.length) {
-            return send(ctx.chatId, 'Pour retirer des emojis : réponds avec /remove à un message qui contient '
-                + 'des emojis de ton pack, ou écris /remove suivi des emojis.');
+            return reply(ctx, 'Envoie <code>/removeemoji</code> suivi des emojis de ton pack à retirer, '
+                + 'ou réponds avec /removeemoji à un message qui les contient.');
         }
         const mine = new Set(ctx.user.packs.map((pack) => pack.name));
         let removed = 0;
@@ -190,10 +318,94 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
         const lines = [`🗑️ ${removed} emoji(s) retiré(s).`];
         if (notMine) lines.push(`${notMine} emoji(s) ignoré(s) : ils ne sont pas dans tes packs.`);
         if (failed.length) lines.push(`❌ ${failed.length} échec(s) : ${escapeHtml(failed[0])}`);
-        return send(ctx.chatId, lines.join('\n'));
+        return reply(ctx, lines.join('\n'));
     }
 
-    // ----- adding emojis -----------------------------------------------------
+    async function listPacks(ctx) {
+        const { user } = ctx;
+        const lines = [];
+        for (const pack of [...user.packs]) {
+            let count;
+            try {
+                count = (await api.call('getStickerSet', { name: pack.name })).stickers.length;
+            } catch (err) {
+                if (!isGone(err)) throw err;
+                forgetPack(user, pack.name);
+                continue;
+            }
+            const mark = pack.name === user.current && !user.pendingTitle ? '👉' : '▫️';
+            lines.push(`${mark} <b>${escapeHtml(pack.title)}</b> (${count}/${MAX_EMOJIS})\n${packLink(pack.name)}`);
+        }
+        if (user.pendingTitle) lines.push(`👉 🆕 <b>${escapeHtml(user.pendingTitle)}</b> (créé au premier /addemoji)`);
+        if (!lines.length) return reply(ctx, 'Tu n’as pas encore de pack. Crée-en un avec\n<code>/createpack Nom du pack</code>');
+
+        const keyboard = user.packs.map((pack, i) => [{
+            text: `${pack.name === user.current && !user.pendingTitle ? '✅ ' : ''}${pack.title}`,
+            callback_data: `use:${ctx.userId}:${i}`,
+        }]);
+        return reply(ctx, `Tes packs (👉 = celui que j’utilise) :\n\n${lines.join('\n\n')}`
+            + (keyboard.length ? '\n\nAppuie sur un pack pour l’utiliser.' : ''), {
+            reply_markup: keyboard.length ? { inline_keyboard: keyboard } : undefined,
+        });
+    }
+
+    async function askDeletePack(ctx) {
+        const pack = currentPack(ctx.user);
+        if (!pack) return reply(ctx, NO_PACK);
+        ctx.user.pendingDelete = pack.name;
+        store.save();
+        return reply(ctx, `⚠️ Supprimer le pack « <b>${escapeHtml(pack.title)}</b> » ?\nC’est définitif, il disparaîtra pour tout le monde.`, {
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '🗑️ Oui, supprimer', callback_data: `del:${ctx.userId}:yes` },
+                    { text: 'Annuler', callback_data: `del:${ctx.userId}:no` },
+                ]],
+            },
+        });
+    }
+
+    function cancel(ctx) {
+        ctx.user.pendingTitle = null;
+        ctx.user.pendingDelete = null;
+        store.save();
+        return reply(ctx, 'OK, annulé.');
+    }
+
+    async function onButton(query) {
+        const match = /^(use|del):(\d+):(\w+)$/.exec(query.data || '');
+        if (!match) return answer(query);
+        const [, action, owner, value] = match;
+        if (Number(owner) !== query.from.id) return answer(query, 'Ce bouton n’est pas pour toi 😉');
+        const user = store.user(query.from.id);
+
+        if (action === 'use') {
+            const pack = user.packs[Number(value)];
+            if (!pack) return answer(query, 'Pack introuvable');
+            user.current = pack.name;
+            user.pendingTitle = null;
+            store.save();
+            await answer(query, `J’utilise « ${pack.title} »`);
+            return editButtonMessage(query, `✅ J’utilise maintenant le pack « <b>${escapeHtml(pack.title)}</b> ».\n${packLink(pack.name)}`);
+        }
+
+        const pack = user.packs.find((p) => p.name === user.pendingDelete);
+        user.pendingDelete = null;
+        store.save();
+        if (value !== 'yes' || !pack) {
+            await answer(query, 'Annulé');
+            return editButtonMessage(query, 'OK, je ne supprime rien.');
+        }
+        try {
+            await api.call('deleteStickerSet', { name: pack.name });
+        } catch (err) {
+            if (!isGone(err)) throw err;
+        }
+        forgetPack(user, pack.name);
+        await answer(query, 'Pack supprimé');
+        return editButtonMessage(query, `🗑️ Pack « <b>${escapeHtml(pack.title)}</b> » supprimé.`);
+    }
+
+    // ----- adding emojis -------------------------------------------------------
 
     function stickerItem(sticker, fallback) {
         const emoji = sticker.emoji || fallback || FALLBACK_EMOJI;
@@ -201,8 +413,7 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
     }
 
     async function resolveItems(sources) {
-        const ids = [...new Set(sources.filter((s) => s.type === 'custom').map((s) => s.id))];
-        const byId = new Map((await getCustomEmojis(ids)).map((sticker) => [sticker.custom_emoji_id, sticker]));
+        const byId = new Map((await getCustomEmojis(customIds(sources))).map((sticker) => [sticker.custom_emoji_id, sticker]));
         const items = [];
         const problems = [];
         for (const source of sources) {
@@ -212,6 +423,8 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
                 else problems.push(`${source.fallback} : emoji introuvable`);
             } else if (source.type === 'sticker') {
                 items.push(stickerItem(source.sticker));
+            } else if (source.type === 'set') {
+                for (const sticker of source.set.stickers) items.push(stickerItem(sticker));
             } else if (source.type === 'pack') {
                 try {
                     const set = await api.call('getStickerSet', { name: source.name });
@@ -245,6 +458,12 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
         return { format: 'static', ext: 'png', data: await toStaticEmoji(data) };
     }
 
+    function checkAccess(err) {
+        if (/PEER_ID_INVALID|USER_ID_INVALID|user not found/i.test(err.description || '')) {
+            throw new FatalError(`envoie-moi d’abord /start en privé (https://t.me/${me.username}) puis réessaie`);
+        }
+    }
+
     /** Puts one sticker in the target pack, creating the pack if it doesn't exist yet. */
     async function putSticker(ctx, target, input, files, progress) {
         const options = { onWait: (seconds) => progress.waiting(seconds) };
@@ -253,12 +472,11 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
             try {
                 await api.call('addStickerToSet', { user_id: ctx.userId, name: target.pack.name, sticker: input }, files, options);
             } catch (err) {
+                checkAccess(err);
                 if (/STICKERS_TOO_MUCH|too much/i.test(err.description || '')) throw new PackFullError();
-                if (/STICKERSET_INVALID/i.test(err.description || '')) {
-                    ctx.user.packs = ctx.user.packs.filter((pack) => pack.name !== target.pack.name);
-                    if (ctx.user.current === target.pack.name) ctx.user.current = null;
-                    store.save();
-                    throw new FatalError(`le pack « ${target.pack.title} » n’existe plus. Crée-en un nouveau avec /newpack`);
+                if (isGone(err)) {
+                    forgetPack(ctx.user, target.pack.name);
+                    throw new FatalError(`le pack « ${target.pack.title} » n’existe plus. Crée-en un nouveau avec /createpack`);
                 }
                 throw err;
             }
@@ -266,7 +484,7 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
         }
 
         for (let attempt = 0; ; attempt++) {
-            const name = makePackName(target.title, botUsername);
+            const name = makePackName(target.title, me.username);
             try {
                 await api.call('createNewStickerSet', {
                     user_id: ctx.userId,
@@ -276,13 +494,14 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
                     stickers: [input],
                 }, files, options);
             } catch (err) {
+                checkAccess(err);
                 if (attempt < 3 && /occupied/i.test(err.description || '')) continue;
                 throw err;
             }
             target.pack = { name, title: target.title, added: {} };
             ctx.user.packs.push(target.pack);
             ctx.user.current = name;
-            ctx.user.pendingTitle = null;
+            if (target.fromPending) ctx.user.pendingTitle = null;
             store.save();
             return;
         }
@@ -348,25 +567,25 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
                 try {
                     await edit(text, 3);
                 } catch {
-                    await send(chatId, text);
+                    await api.call('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true } });
                 }
             },
         };
     }
 
-    async function openTarget(ctx) {
+    /** The pack the emojis go to: a new one (copy or /createpack) or the one in use. */
+    async function openTarget(ctx, newPackTitle) {
         const { user } = ctx;
-        if (user.pendingTitle) return { pack: null, title: user.pendingTitle, count: 0, existing: new Set() };
-        const pack = user.packs.find((p) => p.name === user.current);
+        if (newPackTitle) return { pack: null, title: newPackTitle, count: 0, existing: new Set() };
+        if (user.pendingTitle) return { pack: null, title: user.pendingTitle, count: 0, existing: new Set(), fromPending: true };
+        const pack = currentPack(user);
         if (!pack) return null;
         try {
             const set = await api.call('getStickerSet', { name: pack.name });
             return { pack, title: pack.title, count: set.stickers.length, existing: new Set(set.stickers.map((s) => s.file_unique_id)) };
         } catch (err) {
-            if (!/STICKERSET_INVALID/i.test(err.description || '')) throw err;
-            user.packs = user.packs.filter((p) => p.name !== pack.name);
-            user.current = null;
-            store.save();
+            if (!isGone(err)) throw err;
+            forgetPack(user, pack.name);
             return null;
         }
     }
@@ -391,18 +610,13 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
         store.save();
     }
 
-    async function addEmojis(msg, ctx) {
-        const sources = extractSources(msg);
-        if (!sources.length) return send(ctx.chatId, HELP);
+    async function addEmojis(ctx, sources, { newPackTitle } = {}) {
+        if (!sources.length) return showHelp(ctx);
 
-        let target = await openTarget(ctx);
-        if (!target) {
-            return send(ctx.chatId, 'D’abord, crée ton pack avec un nom :\n<code>/newpack Nom du pack</code>\npuis renvoie-moi les emojis.');
-        }
+        let target = await openTarget(ctx, newPackTitle);
+        if (!target) return reply(ctx, NO_PACK);
 
-        const status = await send(ctx.chatId, '⏳ Je regarde tes emojis…', {
-            reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true },
-        });
+        const status = await reply(ctx, '⏳ Je regarde tes emojis…');
         const progress = makeProgress(ctx.chatId, status.message_id);
         const { items, problems } = await resolveItems(sources);
 
@@ -479,10 +693,9 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
     // ----- polling -------------------------------------------------------------
 
     async function poll() {
-        const me = await api.call('getMe');
-        botUsername = me.username;
+        me = await api.call('getMe');
         await api.call('setMyCommands', { commands: COMMANDS }).catch(() => {});
-        console.log(`✅ Bot démarré : https://t.me/${botUsername}`);
+        console.log(`✅ Bot démarré : https://t.me/${me.username}`);
 
         let offset = 0;
         while (running) {

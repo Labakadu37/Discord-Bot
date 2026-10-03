@@ -4,6 +4,7 @@
 
 const EMOJI_RE = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
 const PACK_LINK_RE = /t(?:elegram)?\.me\/(?:addemoji|addstickers)\/([A-Za-z][A-Za-z0-9_]{0,63})/gi;
+const PACK_URL_RE = /(?:https?:\/\/)?t(?:elegram)?\.me\/(?:addemoji|addstickers)\/[A-Za-z0-9_]+/gi;
 const segmenter = new Intl.Segmenter('fr', { granularity: 'grapheme' });
 
 const DEFAULT_IMAGE_URLS = {
@@ -30,6 +31,7 @@ function scanText(text, out) {
 /**
  * Everything usable in a message, in the order it appears.
  * Types: custom (premium emoji), unicode, pack (link), sticker, file (image/tgs/webm).
+ * Sources found in the text keep their position (`at`, UTF-16 offset like Telegram's entities).
  */
 function extractSources(message) {
     const sources = [];
@@ -72,8 +74,13 @@ function extractSources(message) {
     scanChunk(text, cursor, text.length, found);
 
     found.sort((a, b) => a.at - b.at);
-    for (const { at, ...source } of found) sources.push(source);
+    sources.push(...found);
     return sources;
+}
+
+/** Text without the t.me/addemoji/… links (used for names typed next to a link). */
+function stripPackLinks(text) {
+    return text.replace(PACK_URL_RE, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function scanChunk(text, from, to, out) {
@@ -137,4 +144,4 @@ async function fetchEmojiImage(emoji) {
     throw new Error(`pas d'image trouvée pour ${emoji}`);
 }
 
-module.exports = { extractSources, fetchEmojiImage, codeCandidates, isEmoji };
+module.exports = { extractSources, stripPackLinks, fetchEmojiImage, codeCandidates, isEmoji };

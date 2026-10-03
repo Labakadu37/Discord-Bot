@@ -2,8 +2,10 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { extractSources, codeCandidates } = require('../lib/emoji');
+const { extractSources, stripPackLinks, codeCandidates } = require('../lib/emoji');
 const { makePackName, nextTitle } = require('../lib/bot');
+
+const withoutOffsets = (sources) => sources.map(({ at, ...source }) => source);
 
 test('keeps the order of premium emojis, normal emojis and pack links', () => {
     const text = '🔥ab❤️ t.me/addemoji/CoolPack 👍🏽';
@@ -11,7 +13,8 @@ test('keeps the order of premium emojis, normal emojis and pack links', () => {
         text,
         entities: [{ type: 'custom_emoji', offset: 4, length: 2, custom_emoji_id: '42' }],
     });
-    assert.deepStrictEqual(sources, [
+    assert.deepStrictEqual(sources.map((s) => s.at), [0, 4, 7, 30]);
+    assert.deepStrictEqual(withoutOffsets(sources), [
         { type: 'unicode', emoji: '🔥' },
         { type: 'custom', id: '42', fallback: '❤️' },
         { type: 'pack', name: 'CoolPack' },
@@ -27,7 +30,7 @@ test('ignores the command and reads text links', () => {
             { type: 'text_link', offset: 8, length: 3, url: 'https://t.me/addstickers/Animals' },
         ],
     });
-    assert.deepStrictEqual(sources, [{ type: 'pack', name: 'Animals' }, { type: 'unicode', emoji: '😀' }]);
+    assert.deepStrictEqual(withoutOffsets(sources), [{ type: 'pack', name: 'Animals' }, { type: 'unicode', emoji: '😀' }]);
 });
 
 test('an image uses the caption emoji instead of adding it', () => {
@@ -36,6 +39,11 @@ test('an image uses the caption emoji instead of adding it', () => {
         caption: 'mon logo 😎',
     });
     assert.deepStrictEqual(sources, [{ type: 'file', fileId: 'big', uniqueId: 'b', format: 'static', emoji: '😎' }]);
+});
+
+test('removes pack links from a name', () => {
+    assert.strictEqual(stripPackLinks('https://t.me/addemoji/Cool_Pack  Ma copie'), 'Ma copie');
+    assert.strictEqual(stripPackLinks('t.me/addstickers/X'), '');
 });
 
 test('emoji image names', () => {
