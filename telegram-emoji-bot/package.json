@@ -1,0 +1,23 @@
+{
+  "name": "telegram-emoji-bot",
+  "version": "1.0.0",
+  "description": "Bot Telegram qui crée des packs d’emojis personnalisés à partir d’emojis d’autres packs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "^5.2.0"
+  },
+  "private": true
+}
