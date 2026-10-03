@@ -9,7 +9,6 @@ const fsp = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
-const sharp = require('sharp');
 
 // ===== Telegram API ================================================
 
@@ -90,8 +89,24 @@ function createClient(token, apiRoot = 'https://api.telegram.org') {
 
 const SIZE = 100;
 
+// sharp (image resizing) is optional: it doesn't install on every phone (Termux).
+// Without it, emojis from other packs still work; only images / normal emojis need it.
+let sharpModule;
+function loadSharp() {
+    if (sharpModule === undefined) {
+        try {
+            sharpModule = require('sharp');
+        } catch {
+            sharpModule = null;
+        }
+    }
+    if (!sharpModule) throw new Error('module « sharp » absent (sur téléphone : npm install --cpu=wasm32 sharp)');
+    return sharpModule;
+}
+
 /** PNG/WEBP/JPEG -> transparent 100x100 PNG. */
 async function toStaticEmoji(buffer) {
+    const sharp = loadSharp();
     return sharp(buffer, { animated: false, density: 300 })
         .ensureAlpha()
         .resize(SIZE, SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
@@ -805,6 +820,8 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
             const small = isSticker && item.sticker.width === 100 && item.sticker.height === 100;
             return { format, ext: 'webm', data: small ? data : await rescaleWebm(data) };
         }
+        // emojis from other packs are already 100x100: no resizing needed
+        if (isSticker && item.sticker.width === 100 && item.sticker.height === 100) return { format: 'static', ext: 'webp', data };
         return { format: 'static', ext: 'png', data: await toStaticEmoji(data) };
     }
 
@@ -1081,7 +1098,7 @@ function startBot({ token, apiRoot, dataFile, pollTimeout = 50 }) {
 
 // ===== Démarrage ==================================================
 
-module.exports = { startBot, makePackName, nextTitle, extractSources, stripPackLinks, codeCandidates, toStaticEmoji, rescaleTgs, rescaleWebm };
+module.exports = { loadSharp, startBot, makePackName, nextTitle, extractSources, stripPackLinks, codeCandidates, toStaticEmoji, rescaleTgs, rescaleWebm };
 
 if (require.main === module) {
     require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -1090,11 +1107,18 @@ if (require.main === module) {
         console.error('❌ BOT_TOKEN manquant : crée un bot avec @BotFather et mets son token dans le fichier .env');
         process.exit(1);
     }
-    startBot({
+    const bot = startBot({
         token,
         apiRoot: process.env.TELEGRAM_API_URL || undefined,
         dataFile: process.env.DATA_FILE || path.join(__dirname, 'data.json'),
-    }).done.catch((err) => {
+    });
+    try {
+        loadSharp();
+    } catch {
+        console.log('ℹ️ « sharp » n’est pas installé : les emojis d’autres packs marchent, mais pas les images ni les emojis normaux.');
+        console.log('   Pour les activer sur téléphone : npm install --cpu=wasm32 sharp');
+    }
+    bot.done.catch((err) => {
         console.error('❌ Impossible de démarrer le bot :', err.message);
         process.exit(1);
     });
